@@ -123,7 +123,7 @@ function doGet(e) {
       const deXuatT5 = parseVnNumber(row[idxDeXuatT5]);
       const deXuatT6 = parseVnNumber(row[idxDeXuatT6]);
       const deXuatT7 = parseVnNumber(row[idxDeXuatT7]);
-      const thoiDiemTangGia = String(row[idxThoiDiem] || '').trim();
+      const thoiDiemTangGia = formatDate(row[idxThoiDiem]);
 
       let chenhLechDonGia = parseVnNumber(row[idxChenhLech]);
       if (!chenhLechDonGia) {
@@ -354,12 +354,25 @@ function doPost(e) {
 function formatDate(val) {
   if (!val) return '';
   if (val instanceof Date) {
-    var d = val.getDate();
-    var m = val.getMonth() + 1;
-    var y = val.getFullYear();
-    return (d < 10 ? '0' + d : d) + '/' + (m < 10 ? '0' + m : m) + '/' + y;
+    var d = val;
+    var date = d.getDate();
+    var m = d.getMonth() + 1;
+    var y = d.getFullYear();
+    if (date === 1) return 'Tháng ' + m + '/' + y;
+    return (date < 10 ? '0' + date : date) + '/' + (m < 10 ? '0' + m : m) + '/' + y;
   }
-  return String(val);
+  var str = String(val).trim();
+  if (str.indexOf('GMT') !== -1 || str.indexOf('Giờ') !== -1 || str.indexOf('00:00:00') !== -1) {
+    var d2 = new Date(str);
+    if (!isNaN(d2.getTime())) {
+      var date2 = d2.getDate();
+      var m2 = d2.getMonth() + 1;
+      var y2 = d2.getFullYear();
+      if (date2 === 1) return 'Tháng ' + m2 + '/' + y2;
+      return (date2 < 10 ? '0' + date2 : date2) + '/' + (m2 < 10 ? '0' + m2 : m2) + '/' + y2;
+    }
+  }
+  return str;
 }
 
 function jsonResponse(data) {

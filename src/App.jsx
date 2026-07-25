@@ -61,6 +61,37 @@ export default function App() {
     }
   };
 
+  // Helper to format date / thoiDiem string cleanly
+  const formatThoiDiem = (val) => {
+    if (!val) return '';
+    const str = String(val).trim();
+    if (!str) return '';
+
+    if (str.includes('GMT') || str.includes('Giờ') || /\b(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\b/i.test(str)) {
+      const d = new Date(str);
+      if (!isNaN(d.getTime())) {
+        const month = d.getMonth() + 1;
+        const year = d.getFullYear();
+        const date = d.getDate();
+        if (date === 1) {
+          return `Tháng ${month}/${year}`;
+        }
+        return `${date < 10 ? '0' + date : date}/${month < 10 ? '0' + month : month}/${year}`;
+      }
+    }
+
+    if (/^\d{4}-\d{2}-\d{2}/.test(str)) {
+      const d = new Date(str);
+      if (!isNaN(d.getTime())) {
+        const month = d.getMonth() + 1;
+        const year = d.getFullYear();
+        return `Tháng ${month}/${year}`;
+      }
+    }
+
+    return str;
+  };
+
   // Helper to sanitize & recalculate 2026 debt fields on frontend
   const processStationRecords = (records) => {
     if (!Array.isArray(records)) return [];
@@ -91,9 +122,11 @@ export default function App() {
       const no2026Ton = Math.max(0, tongHapDong2026 - daTT2026);
 
       const isDaThanhToan = (thangDaTT2026 >= 12) || (daTT2026 >= tongHapDong2026 && tongHapDong2026 > 0);
+      const thoiDiemTangGia = formatThoiDiem(row.thoiDiemTangGia);
 
       return {
         ...row,
+        thoiDiemTangGia,
         donGia2026: donGia2026Effective,
         tongHapDong2026,
         daThanhToan2026Den313: daTT2026,
