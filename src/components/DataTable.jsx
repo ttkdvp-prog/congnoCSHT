@@ -154,18 +154,18 @@ export default function DataTable({ data, onViewDetail, onEditPrice }) {
                     {formatMoney(row.daThanhToan2026Den313)}
                   </td>
                   <td style={{ textAlign: 'center' }}>
-                    {row.soThangNo2026 > 0 ? (
+                    {!row.isDaThanhToan ? (
                       <span className="badge badge-rose" style={{ fontWeight: 700 }}>
-                        Nợ {row.soThangNo2026} tháng
+                        Nợ {row.soThangNo2026 || 12} tháng
                       </span>
                     ) : (
                       <span className="badge badge-emerald">Đủ 12T</span>
                     )}
                   </td>
                   <td style={{ textAlign: 'right' }}>
-                    {row.no2026Ton > 0 ? (
-                      <span style={{ color: 'var(--accent-amber)', fontWeight: 700 }}>
-                        {formatMoney(row.no2026Ton)}
+                    {!row.isDaThanhToan ? (
+                      <span style={{ color: '#f87171', fontWeight: 700 }}>
+                        {formatMoney(row.no2026Ton || ((row.donGia2026 || row.donGia2025 || 0) * 12))}
                       </span>
                     ) : (
                       <span style={{ color: 'var(--accent-emerald)', fontSize: '0.8rem' }}>0 ₫</span>

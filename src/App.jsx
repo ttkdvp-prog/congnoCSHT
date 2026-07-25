@@ -17,7 +17,6 @@ import ApiConfigModal from './components/ApiConfigModal';
 import { AlertTriangle, Settings } from 'lucide-react';
 
 export default function App() {
-  const [data, setData] = useState(rawFallbackData);
   const DEFAULT_GAS_URL = 'https://script.google.com/macros/s/AKfycbx14yyyw2fJ4rW3OdxcfOlli8OKPlr84-vxEhPkI9yMcTnM2BT8WeDs75hzx9h0mEPs/exec';
   const [apiUrl, setApiUrl] = useState(() => localStorage.getItem('csht_apps_script_url') || DEFAULT_GAS_URL);
   const [isLive, setIsLive] = useState(false);
@@ -62,6 +61,52 @@ export default function App() {
     }
   };
 
+  // Helper to sanitize & recalculate 2026 debt fields on frontend
+  const processStationRecords = (records) => {
+    if (!Array.isArray(records)) return [];
+    return records.map(row => {
+      const donGia2025 = row.donGia2025 || 0;
+      const donGia2026Raw = row.donGia2026 || 0;
+      const deXuatT5 = row.deXuatT5 || 0;
+      const deXuatT6 = row.deXuatT6 || 0;
+      const deXuatT7 = row.deXuatT7 || 0;
+
+      const donGia2026Effective = donGia2026Raw > 0 ? donGia2026Raw : (deXuatT5 > 0 ? deXuatT5 : (deXuatT6 > 0 ? deXuatT6 : (deXuatT7 > 0 ? deXuatT7 : donGia2025)));
+      const daTT2026 = row.daThanhToan2026Den313 || 0;
+
+      let countMonthsPaid2026 = 0;
+      if (row.payments2026 && typeof row.payments2026 === 'object') {
+        Object.values(row.payments2026).forEach(val => {
+          if (val > 0) countMonthsPaid2026++;
+        });
+      }
+
+      let thangDaTT2026 = countMonthsPaid2026;
+      if (thangDaTT2026 === 0 && donGia2026Effective > 0 && daTT2026 > 0) {
+        thangDaTT2026 = Math.min(12, Math.round(daTT2026 / donGia2026Effective));
+      }
+
+      const soThangNo2026 = Math.max(0, 12 - thangDaTT2026);
+      const tongHapDong2026 = donGia2026Effective * 12;
+      const no2026Ton = Math.max(0, tongHapDong2026 - daTT2026);
+
+      const isDaThanhToan = (thangDaTT2026 >= 12) || (daTT2026 >= tongHapDong2026 && tongHapDong2026 > 0);
+
+      return {
+        ...row,
+        donGia2026: donGia2026Effective,
+        tongHapDong2026,
+        daThanhToan2026Den313: daTT2026,
+        no2026Ton,
+        thangDaTT2026,
+        soThangNo2026,
+        isDaThanhToan
+      };
+    });
+  };
+
+  const [data, setData] = useState(() => processStationRecords(rawFallbackData));
+
   // Load data from Google Apps Script if URL exists
   const fetchDataFromGAS = async (url) => {
     if (!url) return;
@@ -71,7 +116,7 @@ export default function App() {
       const res = await fetch(endpoint);
       const result = await res.json();
       if (result && result.status === 'success' && Array.isArray(result.data) && result.data.length > 0) {
-        setData(result.data);
+        setData(processStationRecords(result.data));
         setIsLive(true);
       } else {
         setIsLive(false);
