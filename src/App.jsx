@@ -124,10 +124,11 @@ export default function App() {
   const thoiDiemOptions = useMemo(() => {
     const set = new Set();
     data.forEach(item => {
-      if (item.thoiDiemTangGia) set.add(item.thoiDiemTangGia);
-      if (item.deXuatT5 > 0) set.add('Đề xuất T5');
-      if (item.deXuatT6 > 0) set.add('Đề xuất T6');
-      if (item.deXuatT7 > 0) set.add('Đề xuất T7');
+      if (item.thoiDiemTangGia) {
+        set.add(item.thoiDiemTangGia);
+      } else if (item.isTangGia) {
+        set.add('Chưa xác định');
+      }
     });
     return Array.from(set).sort();
   }, [data]);
@@ -173,10 +174,11 @@ export default function App() {
       // Thời điểm tăng giá
       if (filters.thoiDiemTangGia) {
         const t = filters.thoiDiemTangGia;
-        if (t === 'Đề xuất T5' && !(item.deXuatT5 > 0)) return false;
-        if (t === 'Đề xuất T6' && !(item.deXuatT6 > 0)) return false;
-        if (t === 'Đề xuất T7' && !(item.deXuatT7 > 0)) return false;
-        if (!t.startsWith('Đề xuất') && item.thoiDiemTangGia !== t) return false;
+        if (t === 'Chưa xác định') {
+          if (item.thoiDiemTangGia || !item.isTangGia) return false;
+        } else if (item.thoiDiemTangGia !== t) {
+          return false;
+        }
       }
 
       return true;
