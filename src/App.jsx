@@ -141,6 +141,7 @@ export default function App() {
   const [data, setData] = useState(() => processStationRecords(rawFallbackData));
 
   const [autoSync, setAutoSync] = useState(true);
+  const [syncInterval, setSyncInterval] = useState(3000); // 3 seconds fast sync by default!
 
   // Load data from Google Apps Script if URL exists
   const fetchDataFromGAS = async (url, isSilent = false) => {
@@ -170,14 +171,14 @@ export default function App() {
     }
   }, [apiUrl]);
 
-  // Auto polling interval every 15s to automatically sync changes made directly on Google Sheets
+  // Auto polling interval every 2s-3s to automatically sync changes made directly on Google Sheets instantly
   useEffect(() => {
     if (!apiUrl || !autoSync) return;
     const timer = setInterval(() => {
       fetchDataFromGAS(apiUrl, true);
-    }, 15000);
+    }, syncInterval);
     return () => clearInterval(timer);
-  }, [apiUrl, autoSync]);
+  }, [apiUrl, autoSync, syncInterval]);
 
   const handleFilterChange = (key, value) => {
     setFilters(prev => ({ ...prev, [key]: value }));
@@ -430,6 +431,8 @@ export default function App() {
         totalCount={data.length}
         autoSync={autoSync}
         onToggleAutoSync={() => setAutoSync(!autoSync)}
+        syncInterval={syncInterval}
+        onChangeSyncInterval={(val) => setSyncInterval(val)}
       />
 
       {/* Main Navigation Tabs */}
