@@ -437,6 +437,41 @@ export default function App() {
     XLSX.writeFile(wb, `BaoCao_CongNo_CSHT_${new Date().toISOString().slice(0, 10)}.xlsx`);
   };
 
+  // Export specifically Price Increase Stations to Excel
+  const handleExportPriceIncreaseExcel = () => {
+    const list = data.filter(item => item.isTangGia);
+    const exportRows = list.map((item, idx) => ({
+      'STT': idx + 1,
+      'Site': item.site,
+      'Tổ hạ tầng': item.toHaTang,
+      'Mã CSHT': item.maCSHT,
+      'Tên CSHT': item.tenCSHT,
+      'Chủ hợp đồng': item.chuHopDong,
+      'Số hợp đồng': item.soHopDong,
+      'Đơn giá 2025': item.donGia2025,
+      'Đơn giá 2026 / Mới': item.donGia2026,
+      'Mức tăng giá (Chênh lệch)': item.chenhLechDonGia,
+      'Thời điểm tăng giá': item.thoiDiemTangGia || 'Chưa xác định',
+      'Đề xuất T5': item.deXuatT5,
+      'Đề xuất T6': item.deXuatT6,
+      'Đề xuất T7': item.deXuatT7,
+      'Còn nợ tồn 2025': item.no2025Ton,
+      'Đã TT 2026': item.daThanhToan2026Den313,
+      'Số tháng nợ 2026': item.soThangNo2026,
+      'Số tiền nợ 2026': item.no2026Ton,
+      'Người thụ hưởng': item.nguoiThuHuong,
+      'Số tài khoản': item.soTaiKhoan,
+      'Tên ngân hàng': item.tenNganHang,
+      'Tình trạng pháp lý': item.tinhTrangPhapLy,
+      'Ghi chú': item.ghiChu
+    }));
+
+    const ws = XLSX.utils.json_to_sheet(exportRows);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Tram_Tang_Gia_2026');
+    XLSX.writeFile(wb, `Danh_Sach_Tram_Tang_Gia_2026_${new Date().toISOString().slice(0, 10)}.xlsx`);
+  };
+
   const activeFilterName = useMemo(() => {
     if (filters.chiTangGia) return 'priceIncrease';
     if (filters.ttStatus === 'paid') return 'paid';
@@ -533,6 +568,7 @@ export default function App() {
           <PriceIncreasePanel
             data={data}
             onEditStation={(station) => setEditingPriceStation(station)}
+            onExportPriceIncreaseExcel={handleExportPriceIncreaseExcel}
           />
         </>
       )}
@@ -543,6 +579,7 @@ export default function App() {
           <PriceIncreasePanel
             data={data}
             onEditStation={(station) => setEditingPriceStation(station)}
+            onExportPriceIncreaseExcel={handleExportPriceIncreaseExcel}
           />
           <FilterBar
             filters={filters}

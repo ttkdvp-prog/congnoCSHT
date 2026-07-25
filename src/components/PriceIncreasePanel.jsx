@@ -1,7 +1,8 @@
 import React from 'react';
-import { Flame, Edit3, ArrowUpRight, CheckCircle2, FileSpreadsheet } from 'lucide-react';
+import { Flame, Edit3, ArrowUpRight, FileSpreadsheet, Download } from 'lucide-react';
+import * as XLSX from 'xlsx';
 
-export default function PriceIncreasePanel({ data, onEditStation }) {
+export default function PriceIncreasePanel({ data, onEditStation, onExportPriceIncreaseExcel }) {
   const formatMoney = (val) => {
     if (!val) return '0 ₫';
     return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(val);
@@ -27,6 +28,43 @@ export default function PriceIncreasePanel({ data, onEditStation }) {
   const sortedTopIncrease = [...tangGiaList]
     .sort((a, b) => (b.chenhLechDonGia || 0) - (a.chenhLechDonGia || 0))
     .slice(0, 8);
+
+  const handleExport = () => {
+    if (onExportPriceIncreaseExcel) {
+      onExportPriceIncreaseExcel();
+    } else {
+      const exportRows = tangGiaList.map((item, idx) => ({
+        'STT': idx + 1,
+        'Site': item.site,
+        'Tổ hạ tầng': item.toHaTang,
+        'Mã CSHT': item.maCSHT,
+        'Tên CSHT': item.tenCSHT,
+        'Chủ hợp đồng': item.chuHopDong,
+        'Số hợp đồng': item.soHopDong,
+        'Đơn giá 2025': item.donGia2025,
+        'Đơn giá 2026 / Mới': item.donGia2026,
+        'Mức tăng giá (Chênh lệch)': item.chenhLechDonGia,
+        'Thời điểm tăng giá': item.thoiDiemTangGia || 'Chưa xác định',
+        'Đề xuất T5': item.deXuatT5,
+        'Đề xuất T6': item.deXuatT6,
+        'Đề xuất T7': item.deXuatT7,
+        'Còn nợ tồn 2025': item.no2025Ton,
+        'Đã TT 2026': item.daThanhToan2026Den313,
+        'Số tháng nợ 2026': item.soThangNo2026,
+        'Số tiền nợ 2026': item.no2026Ton,
+        'Người thụ hưởng': item.nguoiThuHuong,
+        'Số tài khoản': item.soTaiKhoan,
+        'Tên ngân hàng': item.tenNganHang,
+        'Tình trạng pháp lý': item.tinhTrangPhapLy,
+        'Ghi chú': item.ghiChu
+      }));
+
+      const ws = XLSX.utils.json_to_sheet(exportRows);
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, 'Tram_Tang_Gia_2026');
+      XLSX.writeFile(wb, `Danh_Sach_Tram_Tang_Gia_2026_${new Date().toISOString().slice(0, 10)}.xlsx`);
+    }
+  };
 
   return (
     <div className="glass-panel" style={{ padding: '1.5rem', marginBottom: '1.5rem', border: '1px solid rgba(245, 158, 11, 0.3)' }}>
@@ -56,14 +94,26 @@ export default function PriceIncreasePanel({ data, onEditStation }) {
           </div>
         </div>
 
-        <div style={{ display: 'flex', gap: '1.5rem', background: 'var(--bg-surface)', padding: '0.5rem 1rem', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-color)' }}>
-          <div>
-            <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>TỔNG TIỀN TĂNG/THÁNG:</span>
-            <div style={{ fontWeight: 700, color: '#fbbf24', fontSize: '1rem' }}>{formatMoney(totalIncrease)}</div>
-          </div>
-          <div style={{ borderLeft: '1px solid var(--border-color)', paddingLeft: '1.5rem' }}>
-            <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>MỨC TĂNG TRUNG BÌNH:</span>
-            <div style={{ fontWeight: 700, color: 'var(--text-main)', fontSize: '1rem' }}>{formatMoney(avgIncrease)}</div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', flexWrap: 'wrap' }}>
+          <button 
+            className="btn btn-amber" 
+            onClick={handleExport}
+            style={{ padding: '0.5rem 1rem', fontSize: '0.85rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '0.5rem' }}
+            title="Xuất file Excel danh sách các trạm tăng giá 2026"
+          >
+            <Download size={16} />
+            <span>Xuất Excel Trạm Tăng Giá ({tangGiaList.length} Trạm)</span>
+          </button>
+
+          <div style={{ display: 'flex', gap: '1.5rem', background: 'var(--bg-surface)', padding: '0.5rem 1rem', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-color)' }}>
+            <div>
+              <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>TỔNG TIỀN TĂNG/THÁNG:</span>
+              <div style={{ fontWeight: 700, color: '#fbbf24', fontSize: '1rem' }}>{formatMoney(totalIncrease)}</div>
+            </div>
+            <div style={{ borderLeft: '1px solid var(--border-color)', paddingLeft: '1.5rem' }}>
+              <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>MỨC TĂNG TRUNG BÌNH:</span>
+              <div style={{ fontWeight: 700, color: 'var(--text-main)', fontSize: '1rem' }}>{formatMoney(avgIncrease)}</div>
+            </div>
           </div>
         </div>
       </div>
