@@ -138,7 +138,7 @@ function doGet(e) {
         }
       }
 
-      const donGia2026 = donGia2026Raw > 0 ? donGia2026Raw : (donGia2025 + chenhLechDonGia);
+      const donGia2026 = donGia2026Raw > 0 ? donGia2026Raw : (deXuatT5 > 0 ? deXuatT5 : donGia2025);
       const isTangGia = chenhLechDonGia > 0;
 
       const tong2025DaTra = parseVnNumber(row[idxTong2025DaTra]);
@@ -156,13 +156,17 @@ function doGet(e) {
       }
 
       const payments2026 = {};
-      let monthlyPaid2026Sum = 0;
+      let countMonthsPaid2026 = 0;
+      let sumMonthlyPayments2026 = 0;
       for (let m = 1; m <= 12; m++) {
         const mPattern = 't' + (m < 10 ? '0' + m : m) + '/2026';
         const mIdx = findColIdx(mPattern);
         const pVal = mIdx !== -1 ? parseVnNumber(row[mIdx]) : 0;
         payments2026['T' + m] = pVal;
-        monthlyPaid2026Sum += pVal;
+        if (pVal > 0) {
+          countMonthsPaid2026++;
+          sumMonthlyPayments2026 += pVal;
+        }
       }
 
       const tongChiTiet2025 = parseVnNumber(row[idxTongChiTiet2025]);
@@ -171,15 +175,19 @@ function doGet(e) {
       const tinhTrangPhapLy = String(row[idxPhapLy] || '').trim();
       const ngayThanhToan = formatDate(row[idxNgayThanhToan]);
       const daThanhToan2026Den313Raw = parseVnNumber(row[idxDaThanhToan2026]);
-      const daThanhToan2026Den313 = daThanhToan2026Den313Raw > 0 ? daThanhToan2026Den313Raw : monthlyPaid2026Sum;
+      const daThanhToan2026Den313 = daThanhToan2026Den313Raw > 0 ? daThanhToan2026Den313Raw : sumMonthlyPayments2026;
       const ghiChu = String(row[idxGhiChu] || '').trim();
 
+      let thangDaTT2026 = countMonthsPaid2026;
+      if (thangDaTT2026 === 0 && donGia2026 > 0 && daThanhToan2026Den313 > 0) {
+        thangDaTT2026 = Math.min(12, Math.round(daThanhToan2026Den313 / donGia2026));
+      }
+
+      const soThangNo2026 = Math.max(0, 12 - thangDaTT2026);
       const tongHapDong2026 = donGia2026 * 12;
       const no2026Ton = Math.max(0, tongHapDong2026 - daThanhToan2026Den313);
-      const thangDaTT2026 = donGia2026 > 0 ? Math.min(12, Math.round(daThanhToan2026Den313 / donGia2026)) : (soThangCoTT || 0);
-      const soThangNo2026 = donGia2026 > 0 ? Math.max(0, 12 - thangDaTT2026) : 0;
 
-      const isDaThanhToan = daThanhToan2026Den313 >= tongHapDong2026 && tongHapDong2026 > 0;
+      const isDaThanhToan = (thangDaTT2026 >= 12) || (daThanhToan2026Den313 >= tongHapDong2026 && tongHapDong2026 > 0);
 
       records.push({
         rowIndex: i + 1,
@@ -230,7 +238,7 @@ function doGet(e) {
     if (params.site) filtered = filtered.filter(function(r) { return r.site === params.site; });
     if (params.chiTangGia === 'true') filtered = filtered.filter(function(r) { return r.isTangGia; });
     if (params.ttStatus === 'paid') filtered = filtered.filter(function(r) { return r.isDaThanhToan; });
-    if (params.ttStatus === 'unpaid2026') filtered = filtered.filter(function(r) { return r.no2026Ton > 0 && r.donGia2026 > 0; });
+    if (params.ttStatus === 'unpaid2026') filtered = filtered.filter(function(r) { return !r.isDaThanhToan; });
     if (params.ttStatus === 'debt2025') filtered = filtered.filter(function(r) { return r.no2025Ton > 0; });
     if (params.search) {
       var q = params.search.toLowerCase();

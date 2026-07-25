@@ -162,8 +162,8 @@ export default function App() {
 
       // Trạng thái Thanh Toán / Nợ Tồn
       if (filters.ttStatus === 'debt2025' && !(item.no2025Ton > 0)) return false;
-      if (filters.ttStatus === 'unpaid2026' && !(item.no2026Ton > 0 && item.donGia2026 > 0)) return false;
-      if (filters.ttStatus === 'paid2026' && !(item.daThanhToan2026Den313 > 0 && item.no2026Ton === 0)) return false;
+      if (filters.ttStatus === 'unpaid2026' && item.isDaThanhToan) return false;
+      if (filters.ttStatus === 'paid2026' && !item.isDaThanhToan) return false;
 
       // Khoảng Tiền Tăng Giá
       if (filters.khoangTangGia) {
@@ -197,7 +197,7 @@ export default function App() {
     const tangGiaCount = tangGiaList.length;
     const totalTangGiaAmount = tangGiaList.reduce((sum, i) => sum + (i.chenhLechDonGia || 0), 0);
 
-    const paidList = data.filter(i => i.daThanhToan2026Den313 > 0 && i.no2026Ton === 0);
+    const paidList = data.filter(i => i.isDaThanhToan);
     const paidCount = paidList.length;
 
     const debtList = data.filter(i => i.no2025Ton > 0);
@@ -231,8 +231,8 @@ export default function App() {
     total: data.length,
     tangGia: data.filter(i => i.isTangGia).length,
     debt2025: data.filter(i => i.no2025Ton > 0).length,
-    unpaid2026: data.filter(i => i.no2026Ton > 0 && i.donGia2026 > 0).length,
-    paid2026: data.filter(i => i.daThanhToan2026Den313 > 0 && i.no2026Ton === 0).length
+    unpaid2026: data.filter(i => !i.isDaThanhToan).length,
+    paid2026: data.filter(i => i.isDaThanhToan).length
   }), [data]);
 
   // Save / Update Full Station Data (Sync with Google Sheets)
