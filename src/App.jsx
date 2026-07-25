@@ -4,6 +4,7 @@ import * as XLSX from 'xlsx';
 import rawFallbackData from './data/csht_data.json';
 
 import Header from './components/Header';
+import TabBar from './components/TabBar';
 import KpiCards from './components/KpiCards';
 import FilterBar from './components/FilterBar';
 import PriceIncreasePanel from './components/PriceIncreasePanel';
@@ -13,7 +14,7 @@ import EditPriceModal from './components/EditPriceModal';
 import EditStationModal from './components/EditStationModal';
 import DetailModal from './components/DetailModal';
 import ApiConfigModal from './components/ApiConfigModal';
-import { AlertTriangle, ExternalLink, Settings } from 'lucide-react';
+import { AlertTriangle, Settings } from 'lucide-react';
 
 export default function App() {
   const [data, setData] = useState(rawFallbackData);
@@ -23,6 +24,9 @@ export default function App() {
   const [isLoading, setIsLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [toastMessage, setToastMessage] = useState(null);
+
+  // Active Main Navigation Tab ('overview', 'priceIncrease', 'payments', 'allStations')
+  const [mainTab, setMainTab] = useState('overview');
 
   // Modals state
   const [editingStation, setEditingStation] = useState(null);
@@ -41,6 +45,20 @@ export default function App() {
     khoangTangGia: '',
     thoiDiemTangGia: ''
   });
+
+  // Sync tab changes with filters
+  const handleTabChange = (tabId) => {
+    setMainTab(tabId);
+    if (tabId === 'priceIncrease') {
+      setFilters(prev => ({ ...prev, chiTangGia: true, ttStatus: '' }));
+    } else if (tabId === 'payments') {
+      setFilters(prev => ({ ...prev, chiTangGia: false, ttStatus: 'unpaid' }));
+    } else if (tabId === 'allStations') {
+      setFilters(prev => ({ ...prev, chiTangGia: false, ttStatus: '' }));
+    } else if (tabId === 'overview') {
+      setFilters(prev => ({ ...prev, chiTangGia: false, ttStatus: '' }));
+    }
+  };
 
   // Load data from Google Apps Script if URL exists
   const fetchDataFromGAS = async (url) => {
@@ -80,8 +98,8 @@ export default function App() {
       toHaTang: '',
       site: '',
       tinhTrangPhapLy: '',
-      chiTangGia: false,
-      ttStatus: '',
+      chiTangGia: mainTab === 'priceIncrease',
+      ttStatus: mainTab === 'payments' ? 'unpaid' : '',
       khoangTangGia: '',
       thoiDiemTangGia: ''
     });
@@ -171,14 +189,14 @@ export default function App() {
     const totalToHaTang = new Set(filteredData.map(i => i.toHaTang)).size;
     const totalSites = new Set(filteredData.map(i => i.site)).size;
 
-    const tangGiaList = filteredData.filter(i => i.isTangGia);
+    const tangGiaList = data.filter(i => i.isTangGia);
     const tangGiaCount = tangGiaList.length;
     const totalTangGiaAmount = tangGiaList.reduce((sum, i) => sum + (i.chenhLechDonGia || 0), 0);
 
-    const paidList = filteredData.filter(i => i.daThanhToan2026Den313 > 0 || (i.no2025Ton === 0 && i.tong2025DaTra > 0));
+    const paidList = data.filter(i => i.daThanhToan2026Den313 > 0 || (i.no2025Ton === 0 && i.tong2025DaTra > 0));
     const paidCount = paidList.length;
 
-    const debtList = filteredData.filter(i => i.no2025Ton > 0);
+    const debtList = data.filter(i => i.no2025Ton > 0);
     const debtCount = debtList.length;
 
     const totalDonGia2025 = filteredData.reduce((sum, i) => sum + (i.donGia2025 || 0), 0);
@@ -202,7 +220,15 @@ export default function App() {
       totalNo2025Ton,
       totalDaThanhToan2026
     };
-  }, [filteredData]);
+  }, [data, filteredData]);
+
+  // Counts for Tab Bar
+  const tabCounts = useMemo(() => ({
+    total: data.length,
+    tangGia: data.filter(i => i.isTangGia).length,
+    paid: data.filter(i => i.daThanhToan2026Den313 > 0 || (i.no2025Ton === 0 && i.tong2025DaTra > 0)).length,
+    debt: data.filter(i => i.no2025Ton > 0).length
+  }), [data]);
 
   // Save / Update Full Station Data (Sync with Google Sheets)
   const handleSaveStation = async (updatedStation) => {
@@ -230,7 +256,7 @@ export default function App() {
       } else {
         setToastMessage({
           type: 'warning',
-          text: `⚠️ Bạn vừa sửa dữ liệu trạm ${updatedStation.maCSHT} ở chế độ Offline. Để sửa trực tiếp trên Google Sheet, vui lòng bấm nút "Cấu hình API" ở trên để dán URL Google Apps Script!`
+          text: `⚠️ Bạn vừa sửa dữ liệu trạm ${updatedStation.maCSHT} ở chế độ Offline. Để sửa trực tiếp trên Google Sheet, vui lòng dán URL Google Apps Script!`
         });
       }
       setEditingStation(null);
@@ -290,7 +316,6 @@ export default function App() {
     XLSX.writeFile(wb, `BaoCao_CongNo_CSHT_${new Date().toISOString().slice(0, 10)}.xlsx`);
   };
 
-  // Active filter name for KPI highlights
   const activeFilterName = useMemo(() => {
     if (filters.chiTangGia) return 'priceIncrease';
     if (filters.ttStatus === 'paid') return 'paid';
@@ -311,7 +336,14 @@ export default function App() {
         totalCount={data.length}
       />
 
-      {/* Connection Notice Banner when Offline */}
+      {/* Main Navigation Tabs */}
+      <TabBar
+        activeTab={mainTab}
+        onTabChange={handleTabChange}
+        counts={tabCounts}
+      />
+
+      {/* Offline Alert Banner */}
       {!isLive && (
         <div style={{
           background: 'rgba(245, 158, 11, 0.15)',
@@ -330,7 +362,7 @@ export default function App() {
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
             <AlertTriangle size={20} style={{ flexShrink: 0 }} />
             <div>
-              <strong>⚠️ Chế độ Offline Data:</strong> Bạn chưa dán đường dẫn Google Apps Script API nên dữ liệu khi sửa chỉ lưu tạm trên trình duyệt và <u>chưa sửa trực tiếp trên Google Sheet</u>.
+              <strong>⚠️ Chế độ Offline Data:</strong> Bạn chưa kết nối Google Apps Script API nên dữ liệu khi sửa chỉ lưu tạm trên trình duyệt và <u>chưa sửa trực tiếp trên Google Sheet</u>.
             </div>
           </div>
           <button className="btn btn-amber" onClick={() => setIsConfigOpen(true)} style={{ padding: '0.4rem 0.85rem', fontSize: '0.8rem' }}>
@@ -362,43 +394,101 @@ export default function App() {
         </div>
       )}
 
-      {/* KPI Cards Section */}
-      <KpiCards
-        stats={stats}
-        activeFilter={activeFilterName}
-        onSelectPriceIncreaseOnly={() => setFilters(prev => ({ ...prev, chiTangGia: !prev.chiTangGia, ttStatus: '' }))}
-        onSelectPaidOnly={() => setFilters(prev => ({ ...prev, ttStatus: prev.ttStatus === 'paid' ? '' : 'paid', chiTangGia: false }))}
-        onSelectDebtOnly={() => setFilters(prev => ({ ...prev, ttStatus: prev.ttStatus === 'unpaid' ? '' : 'unpaid', chiTangGia: false }))}
-      />
+      {/* TAB 1: OVERVIEW & ANALYTICS */}
+      {mainTab === 'overview' && (
+        <>
+          <KpiCards
+            stats={stats}
+            activeFilter={activeFilterName}
+            onSelectPriceIncreaseOnly={() => handleTabChange('priceIncrease')}
+            onSelectPaidOnly={() => handleTabChange('payments')}
+            onSelectDebtOnly={() => handleTabChange('payments')}
+          />
+          <AnalyticsSection data={data} />
+          <PriceIncreasePanel
+            data={data}
+            onEditStation={(station) => setEditingPriceStation(station)}
+          />
+        </>
+      )}
 
-      {/* Filter Section */}
-      <FilterBar
-        filters={filters}
-        onChange={handleFilterChange}
-        onReset={handleResetFilters}
-        toHaTangOptions={toHaTangOptions}
-        siteOptions={siteOptions}
-        phapLyOptions={phapLyOptions}
-        thoiDiemOptions={thoiDiemOptions}
-        totalFiltered={filteredData.length}
-        totalAll={data.length}
-      />
+      {/* TAB 2: PRICE INCREASE STATIONS */}
+      {mainTab === 'priceIncrease' && (
+        <>
+          <PriceIncreasePanel
+            data={data}
+            onEditStation={(station) => setEditingPriceStation(station)}
+          />
+          <FilterBar
+            filters={filters}
+            onChange={handleFilterChange}
+            onReset={handleResetFilters}
+            toHaTangOptions={toHaTangOptions}
+            siteOptions={siteOptions}
+            phapLyOptions={phapLyOptions}
+            thoiDiemOptions={thoiDiemOptions}
+            totalFiltered={filteredData.length}
+            totalAll={data.length}
+          />
+          <DataTable
+            data={filteredData}
+            onViewDetail={(station) => setViewingStation(station)}
+            onEditPrice={(station) => setEditingStation(station)}
+          />
+        </>
+      )}
 
-      {/* Special Panel: Price Increase Stations */}
-      <PriceIncreasePanel
-        data={filteredData}
-        onEditStation={(station) => setEditingPriceStation(station)}
-      />
+      {/* TAB 3: PAYMENTS & DEBT STATUS */}
+      {mainTab === 'payments' && (
+        <>
+          <KpiCards
+            stats={stats}
+            activeFilter={activeFilterName}
+            onSelectPriceIncreaseOnly={() => handleTabChange('priceIncrease')}
+            onSelectPaidOnly={() => setFilters(prev => ({ ...prev, ttStatus: 'paid' }))}
+            onSelectDebtOnly={() => setFilters(prev => ({ ...prev, ttStatus: 'unpaid' }))}
+          />
+          <FilterBar
+            filters={filters}
+            onChange={handleFilterChange}
+            onReset={handleResetFilters}
+            toHaTangOptions={toHaTangOptions}
+            siteOptions={siteOptions}
+            phapLyOptions={phapLyOptions}
+            thoiDiemOptions={thoiDiemOptions}
+            totalFiltered={filteredData.length}
+            totalAll={data.length}
+          />
+          <AnalyticsSection data={filteredData} />
+          <DataTable
+            data={filteredData}
+            onViewDetail={(station) => setViewingStation(station)}
+            onEditPrice={(station) => setEditingStation(station)}
+          />
+        </>
+      )}
 
-      {/* Recharts Analytics Charts */}
-      <AnalyticsSection data={filteredData} />
-
-      {/* Full Responsive Data Table */}
-      <DataTable
-        data={filteredData}
-        onViewDetail={(station) => setViewingStation(station)}
-        onEditPrice={(station) => setEditingStation(station)}
-      />
+      {/* TAB 4: ALL STATIONS MASTER TABLE */}
+      {mainTab === 'allStations' && (
+        <>
+          <FilterBar
+            filters={filters}
+            onChange={handleFilterChange}
+            onReset={handleResetFilters}
+            toHaTangOptions={toHaTangOptions}
+            siteOptions={siteOptions}
+            phapLyOptions={phapLyOptions}
+            thoiDiemOptions={thoiDiemOptions}
+            totalFiltered={filteredData.length}
+            totalAll={data.length}
+          />
+          <DataTable
+            data={filteredData}
+            onViewDetail={(station) => setViewingStation(station)}
+            onEditPrice={(station) => setEditingStation(station)}
+          />
+        </>
+      )}
 
       {/* Footer */}
       <footer style={{ textAlign: 'center', marginTop: '2.5rem', color: 'var(--text-muted)', fontSize: '0.8rem' }}>
