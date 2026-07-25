@@ -1,5 +1,5 @@
 import React from 'react';
-import { Radio, RefreshCw, Settings, Download, Github, ExternalLink } from 'lucide-react';
+import { Radio, RefreshCw, Settings, Download, Github, AlertTriangle } from 'lucide-react';
 
 export default function Header({ isLive, apiUrl, onOpenConfig, onRefresh, onExportExcel, totalCount }) {
   return (
@@ -41,19 +41,20 @@ export default function Header({ isLive, apiUrl, onOpenConfig, onRefresh, onExpo
               display: 'flex',
               alignItems: 'center',
               gap: '0.5rem',
-              padding: '0.4rem 0.75rem',
+              padding: '0.45rem 0.85rem',
               borderRadius: '9999px',
-              background: isLive ? 'rgba(16, 185, 129, 0.15)' : 'rgba(245, 158, 11, 0.15)',
-              border: isLive ? '1px solid rgba(16, 185, 129, 0.3)' : '1px solid rgba(245, 158, 11, 0.3)',
+              background: isLive ? 'rgba(16, 185, 129, 0.15)' : 'rgba(245, 158, 11, 0.25)',
+              border: isLive ? '1px solid rgba(16, 185, 129, 0.4)' : '1px solid #f59e0b',
               color: isLive ? '#34d399' : '#fbbf24',
-              fontSize: '0.75rem',
-              fontWeight: 600,
-              cursor: 'pointer'
+              fontSize: '0.8rem',
+              fontWeight: 700,
+              cursor: 'pointer',
+              boxShadow: isLive ? undefined : '0 0 12px rgba(245, 158, 11, 0.3)'
             }}
-            title="Nhấn để cấu hình Google Apps Script Web App URL"
+            title="Nhấn vào đây để dán URL Google Apps Script Web App"
           >
-            <Radio size={14} className={isLive ? 'animate-pulse' : ''} />
-            <span>{isLive ? 'Live Sync (Google Sheets)' : 'Offline Data (Chưa kết nối GAS)'}</span>
+            {isLive ? <Radio size={15} className="animate-pulse" /> : <AlertTriangle size={15} />}
+            <span>{isLive ? 'Live Sync (Đã kết nối Google Sheet)' : '⚠️ Offline Data (Bấm để kết nối Google Sheet)'}</span>
           </div>
 
           <button className="btn btn-secondary" onClick={onRefresh} title="Làm mới dữ liệu">
@@ -66,8 +67,9 @@ export default function Header({ isLive, apiUrl, onOpenConfig, onRefresh, onExpo
             <span>Xuất Excel</span>
           </button>
 
-          <button className="btn btn-secondary" onClick={onOpenConfig} title="Cấu hình Google Apps Script API">
+          <button className="btn btn-amber" onClick={onOpenConfig} title="Cấu hình Google Apps Script API URL">
             <Settings size={16} />
+            <span>Cấu hình API</span>
           </button>
 
           <a 

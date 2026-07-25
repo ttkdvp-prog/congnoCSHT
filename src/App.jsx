@@ -13,6 +13,7 @@ import EditPriceModal from './components/EditPriceModal';
 import EditStationModal from './components/EditStationModal';
 import DetailModal from './components/DetailModal';
 import ApiConfigModal from './components/ApiConfigModal';
+import { AlertTriangle, ExternalLink, Settings } from 'lucide-react';
 
 export default function App() {
   const [data, setData] = useState(rawFallbackData);
@@ -20,6 +21,7 @@ export default function App() {
   const [isLive, setIsLive] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [toastMessage, setToastMessage] = useState(null);
 
   // Modals state
   const [editingStation, setEditingStation] = useState(null);
@@ -210,7 +212,7 @@ export default function App() {
 
       // 2. If Google Apps Script API URL is set, sync directly to Google Sheet
       if (apiUrl) {
-        await fetch(apiUrl, {
+        const res = await fetch(apiUrl, {
           method: 'POST',
           headers: { 'Content-Type': 'text/plain' },
           body: JSON.stringify({
@@ -218,15 +220,28 @@ export default function App() {
             ...updatedStation
           })
         });
+        const resData = await res.json();
+        if (resData && resData.status === 'success') {
+          setToastMessage({ type: 'success', text: `✅ Đã lưu và cập nhật trực tiếp lên Google Sheet cho trạm ${updatedStation.maCSHT}!` });
+        } else {
+          setToastMessage({ type: 'warning', text: `⚠️ Ứng dụng đã cập nhật giao diện nhưng Google Apps Script phản hồi: ${resData.message || 'Lỗi lưu'}` });
+        }
+      } else {
+        setToastMessage({
+          type: 'warning',
+          text: `⚠️ Bạn vừa sửa dữ liệu trạm ${updatedStation.maCSHT} ở chế độ Offline. Để sửa trực tiếp trên Google Sheet, vui lòng bấm nút "Cấu hình API" ở trên để dán URL Google Apps Script!`
+        });
       }
       setEditingStation(null);
       setEditingPriceStation(null);
     } catch (err) {
       console.error('Error saving station data:', err);
+      setToastMessage({ type: 'error', text: `⚠️ Không thể kết nối đến Google Apps Script: ${err.message}` });
       setEditingStation(null);
       setEditingPriceStation(null);
     } finally {
       setIsSaving(false);
+      setTimeout(() => setToastMessage(null), 8000);
     }
   };
 
@@ -294,6 +309,57 @@ export default function App() {
         onExportExcel={handleExportExcel}
         totalCount={data.length}
       />
+
+      {/* Connection Notice Banner when Offline */}
+      {!isLive && (
+        <div style={{
+          background: 'rgba(245, 158, 11, 0.15)',
+          border: '1px solid #f59e0b',
+          borderRadius: 'var(--radius-md)',
+          padding: '0.875rem 1.25rem',
+          marginBottom: '1.5rem',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          flexWrap: 'wrap',
+          gap: '0.75rem',
+          color: '#fbbf24',
+          fontSize: '0.85rem'
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+            <AlertTriangle size={20} style={{ flexShrink: 0 }} />
+            <div>
+              <strong>⚠️ Chế độ Offline Data:</strong> Bạn chưa dán đường dẫn Google Apps Script API nên dữ liệu khi sửa chỉ lưu tạm trên trình duyệt và <u>chưa sửa trực tiếp trên Google Sheet</u>.
+            </div>
+          </div>
+          <button className="btn btn-amber" onClick={() => setIsConfigOpen(true)} style={{ padding: '0.4rem 0.85rem', fontSize: '0.8rem' }}>
+            <Settings size={14} />
+            <span>Kết nối Google Sheet ngay</span>
+          </button>
+        </div>
+      )}
+
+      {/* Toast Notification Banner */}
+      {toastMessage && (
+        <div style={{
+          position: 'fixed',
+          bottom: '24px',
+          right: '24px',
+          zIndex: 9999,
+          background: toastMessage.type === 'success' ? '#065f46' : toastMessage.type === 'warning' ? '#78350f' : '#881337',
+          border: '1px solid rgba(255,255,255,0.2)',
+          color: '#fff',
+          padding: '1rem 1.25rem',
+          borderRadius: 'var(--radius-md)',
+          boxShadow: '0 20px 25px -5px rgba(0,0,0,0.5)',
+          maxWidth: '450px',
+          fontSize: '0.85rem',
+          lineHeight: 1.5,
+          animation: 'modalFadeIn 0.3s ease'
+        }}>
+          {toastMessage.text}
+        </div>
+      )}
 
       {/* KPI Cards Section */}
       <KpiCards
