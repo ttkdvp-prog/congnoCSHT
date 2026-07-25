@@ -86,6 +86,9 @@ function doGet(e) {
       const daThanhToan2026Den313 = parseFloat(row[colMap['Đã thanh toán 2026 đến 31/3/2026']]) || 0;
       const ghiChu = String(row[colMap['Ghi chú']] || '').trim();
 
+      // Payment status helper
+      const isDaThanhToan = daThanhToan2026Den313 > 0 || (no2025Ton === 0 && tong2025DaTra > 0);
+
       records.push({
         rowIndex: i + 1,
         stt: stt,
@@ -121,15 +124,18 @@ function doGet(e) {
         tinhTrangPhapLy: tinhTrangPhapLy,
         ngayThanhToan: ngayThanhToan,
         daThanhToan2026Den313: daThanhToan2026Den313,
+        isDaThanhToan: isDaThanhToan,
         ghiChu: ghiChu
       });
     }
 
-    // Apply URL parameters filtering if present
+    // Apply URL parameters filtering
     let filtered = records;
     if (params.toHaTang) filtered = filtered.filter(r => r.toHaTang === params.toHaTang);
     if (params.site) filtered = filtered.filter(r => r.site === params.site);
     if (params.chiTangGia === 'true') filtered = filtered.filter(r => r.isTangGia);
+    if (params.ttStatus === 'paid') filtered = filtered.filter(r => r.isDaThanhToan);
+    if (params.ttStatus === 'unpaid') filtered = filtered.filter(r => !r.isDaThanhToan || r.no2025Ton > 0);
     if (params.search) {
       const q = params.search.toLowerCase();
       filtered = filtered.filter(r => r.maCSHT.toLowerCase().includes(q) || r.tenCSHT.toLowerCase().includes(q) || r.chuHopDong.toLowerCase().includes(q));
@@ -154,7 +160,7 @@ function doPost(e) {
       contents = JSON.parse(e.postData.contents);
     }
 
-    const action = contents.action || 'updatePriceIncrease';
+    const action = contents.action || 'updateStation';
     const ss = SpreadsheetApp.getActiveSpreadsheet();
     const sheet = ss.getSheetByName(SHEET_NAME);
 
@@ -168,57 +174,76 @@ function doPost(e) {
     const colMap = {};
     headers.forEach((h, idx) => { colMap[h] = idx; });
 
-    if (action === 'updatePriceIncrease') {
-      const maCSHT = contents.maCSHT;
-      const rowIndex = contents.rowIndex;
+    const maCSHT = contents.maCSHT;
+    const rowIndex = contents.rowIndex;
 
-      let targetRow = -1;
-      if (rowIndex && rowIndex > 1 && rowIndex <= data.length) {
-        targetRow = rowIndex;
-      } else if (maCSHT) {
-        for (let i = 1; i < data.length; i++) {
-          if (String(data[i][colMap['Mã CSHT']]).trim() === String(maCSHT).trim()) {
-            targetRow = i + 1;
-            break;
-          }
+    let targetRow = -1;
+    if (rowIndex && rowIndex > 1 && rowIndex <= data.length) {
+      targetRow = rowIndex;
+    } else if (maCSHT) {
+      for (let i = 1; i < data.length; i++) {
+        if (String(data[i][colMap['Mã CSHT']]).trim() === String(maCSHT).trim()) {
+          targetRow = i + 1;
+          break;
         }
       }
-
-      if (targetRow === -1) {
-        return jsonResponse({ status: 'error', message: 'Trạm không tồn tại: ' + maCSHT });
-      }
-
-      // Update cells
-      if (contents.donGia2026 !== undefined && colMap['Đơn giá mới 2026 (chưa VAT)'] !== undefined) {
-        sheet.getRange(targetRow, colMap['Đơn giá mới 2026 (chưa VAT)'] + 1).setValue(contents.donGia2026);
-      }
-      if (contents.chenhLechDonGia !== undefined && colMap['Chênh lệch đơn giá 2026 - 2025'] !== undefined) {
-        sheet.getRange(targetRow, colMap['Chênh lệch đơn giá 2026 - 2025'] + 1).setValue(contents.chenhLechDonGia);
-      }
-      if (contents.deXuatT5 !== undefined && colMap['đề xuất tăng giá T5'] !== undefined) {
-        sheet.getRange(targetRow, colMap['đề xuất tăng giá T5'] + 1).setValue(contents.deXuatT5);
-      }
-      if (contents.deXuatT6 !== undefined && colMap['đề xuất tăng giá tháng 6'] !== undefined) {
-        sheet.getRange(targetRow, colMap['đề xuất tăng giá tháng 6'] + 1).setValue(contents.deXuatT6);
-      }
-      if (contents.deXuatT7 !== undefined && colMap['đề xuất tăng giá tháng 7'] !== undefined) {
-        sheet.getRange(targetRow, colMap['đề xuất tăng giá tháng 7'] + 1).setValue(contents.deXuatT7);
-      }
-      if (contents.thoiDiemTangGia !== undefined && colMap['Thời điểm tăng giá'] !== undefined) {
-        sheet.getRange(targetRow, colMap['Thời điểm tăng giá'] + 1).setValue(contents.thoiDiemTangGia);
-      }
-      if (contents.ghiChu !== undefined && colMap['Ghi chú'] !== undefined) {
-        sheet.getRange(targetRow, colMap['Ghi chú'] + 1).setValue(contents.ghiChu);
-      }
-
-      return jsonResponse({
-        status: 'success',
-        message: 'Đã cập nhật thông tin tăng giá thành công cho trạm ' + maCSHT,
-        updatedRow: targetRow
-      });
     }
 
-    return jsonResponse({ status: 'error', message: 'Hành động không hợp lệ: ' + action });
+    if (targetRow === -1) {
+      return jsonResponse({ status: 'error', message: 'Trạm không tồn tại: ' + maCSHT });
+    }
+
+    // Comprehensive Field Updates
+    const updateField = (colName, value) => {
+      if (value !== undefined && colMap[colName] !== undefined) {
+        sheet.getRange(targetRow, colMap[colName] + 1).setValue(value);
+      }
+    };
+
+    // General & Contract Info
+    updateField('Site', contents.site);
+    updateField('Tổ hạ tầng', contents.toHaTang);
+    updateField('Tên CSHT', contents.tenCSHT);
+    updateField('Chủ hợp đồng', contents.chuHopDong);
+    updateField('Số hợp đồng', contents.soHopDong);
+    updateField('tình trạng pháp lý', contents.tinhTrangPhapLy);
+
+    // Price & Price Increase Info
+    updateField('Đơn giá 2025 (chưa VAT)', contents.donGia2025);
+    updateField('Đơn giá mới 2026 (chưa VAT)', contents.donGia2026);
+    updateField('Chênh lệch đơn giá 2026 - 2025', contents.chenhLechDonGia);
+    updateField('đề xuất tăng giá T5', contents.deXuatT5);
+    updateField('đề xuất tăng giá tháng 6', contents.deXuatT6);
+    updateField('đề xuất tăng giá tháng 7', contents.deXuatT7);
+    updateField('Thời điểm tăng giá', contents.thoiDiemTangGia);
+
+    // Payment & Debt Amounts
+    updateField('Tổng 2025 đã trả (theo bảng tổng hợp)', contents.tong2025DaTra);
+    updateField('Còn nợ CN 2025 tồn 15/4/2026', contents.no2025Ton);
+    updateField('Đã thanh toán 2026 đến 31/3/2026', contents.daThanhToan2026Den313);
+    updateField('Ngày thanh toán', contents.ngayThanhToan);
+
+    // Bank Account Info
+    updateField('Người thụ hưởng', contents.nguoiThuHuong);
+    updateField('Số tài khoản', contents.soTaiKhoan);
+    updateField('Tên ngân hàng', contents.tenNganHang);
+    updateField('Ghi chú', contents.ghiChu);
+
+    // Monthly payments 2026 if provided (T01..T12)
+    if (contents.payments2026 && typeof contents.payments2026 === 'object') {
+      for (let m = 1; m <= 12; m++) {
+        const mKey = 'T' + (m < 10 ? '0' + m : m) + '/2026';
+        if (contents.payments2026['T' + m] !== undefined) {
+          updateField(mKey, contents.payments2026['T' + m]);
+        }
+      }
+    }
+
+    return jsonResponse({
+      status: 'success',
+      message: 'Đã cập nhật dữ liệu thành công lên Google Sheet cho trạm ' + (maCSHT || targetRow),
+      updatedRow: targetRow
+    });
 
   } catch (err) {
     return jsonResponse({ status: 'error', message: err.toString() });

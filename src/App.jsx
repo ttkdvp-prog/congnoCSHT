@@ -10,6 +10,7 @@ import PriceIncreasePanel from './components/PriceIncreasePanel';
 import AnalyticsSection from './components/AnalyticsSection';
 import DataTable from './components/DataTable';
 import EditPriceModal from './components/EditPriceModal';
+import EditStationModal from './components/EditStationModal';
 import DetailModal from './components/DetailModal';
 import ApiConfigModal from './components/ApiConfigModal';
 
@@ -22,6 +23,7 @@ export default function App() {
 
   // Modals state
   const [editingStation, setEditingStation] = useState(null);
+  const [editingPriceStation, setEditingPriceStation] = useState(null);
   const [viewingStation, setViewingStation] = useState(null);
   const [isConfigOpen, setIsConfigOpen] = useState(false);
 
@@ -32,6 +34,7 @@ export default function App() {
     site: '',
     tinhTrangPhapLy: '',
     chiTangGia: false,
+    ttStatus: '', // '', 'paid', 'unpaid'
     khoangTangGia: '',
     thoiDiemTangGia: ''
   });
@@ -75,6 +78,7 @@ export default function App() {
       site: '',
       tinhTrangPhapLy: '',
       chiTangGia: false,
+      ttStatus: '',
       khoangTangGia: '',
       thoiDiemTangGia: ''
     });
@@ -132,6 +136,11 @@ export default function App() {
       // Chỉ Trạm Tăng Giá
       if (filters.chiTangGia && !item.isTangGia) return false;
 
+      // Trạng thái Thanh Toán (Paid vs Debt/Unpaid)
+      const isPaid = item.daThanhToan2026Den313 > 0 || (item.no2025Ton === 0 && item.tong2025DaTra > 0);
+      if (filters.ttStatus === 'paid' && !isPaid) return false;
+      if (filters.ttStatus === 'unpaid' && isPaid && !(item.no2025Ton > 0)) return false;
+
       // Khoảng Tiền Tăng Giá
       if (filters.khoangTangGia) {
         const diff = item.chenhLechDonGia || 0;
@@ -163,6 +172,12 @@ export default function App() {
     const tangGiaCount = tangGiaList.length;
     const totalTangGiaAmount = tangGiaList.reduce((sum, i) => sum + (i.chenhLechDonGia || 0), 0);
 
+    const paidList = filteredData.filter(i => i.daThanhToan2026Den313 > 0 || (i.no2025Ton === 0 && i.tong2025DaTra > 0));
+    const paidCount = paidList.length;
+
+    const debtList = filteredData.filter(i => i.no2025Ton > 0);
+    const debtCount = debtList.length;
+
     const totalDonGia2025 = filteredData.reduce((sum, i) => sum + (i.donGia2025 || 0), 0);
     const totalDonGia2026 = filteredData.reduce((sum, i) => sum + (i.donGia2026 || 0), 0);
 
@@ -170,55 +185,46 @@ export default function App() {
     const totalNo2025Ton = filteredData.reduce((sum, i) => sum + (i.no2025Ton || 0), 0);
     const totalDaThanhToan2026 = filteredData.reduce((sum, i) => sum + (i.daThanhToan2026Den313 || 0), 0);
 
-    const avgSoThangTT = totalStations > 0 
-      ? filteredData.reduce((sum, i) => sum + (i.soThangCoTT || 0), 0) / totalStations 
-      : 0;
-
     return {
       totalStations,
       totalToHaTang,
       totalSites,
       tangGiaCount,
+      paidCount,
+      debtCount,
       totalTangGiaAmount,
       totalDonGia2025,
       totalDonGia2026,
       total2025DaTra,
       totalNo2025Ton,
-      totalDaThanhToan2026,
-      avgSoThangTT
+      totalDaThanhToan2026
     };
   }, [filteredData]);
 
-  // Save / Update Station Price Increase
-  const handleSavePriceIncrease = async (updatedStation) => {
+  // Save / Update Full Station Data (Sync with Google Sheets)
+  const handleSaveStation = async (updatedStation) => {
     setIsSaving(true);
     try {
       // 1. Update local state immediately
       setData(prev => prev.map(item => item.maCSHT === updatedStation.maCSHT ? updatedStation : item));
 
-      // 2. If Google Apps Script API URL is set, sync to Google Sheet
+      // 2. If Google Apps Script API URL is set, sync directly to Google Sheet
       if (apiUrl) {
         await fetch(apiUrl, {
           method: 'POST',
           headers: { 'Content-Type': 'text/plain' },
           body: JSON.stringify({
-            action: 'updatePriceIncrease',
-            maCSHT: updatedStation.maCSHT,
-            rowIndex: updatedStation.rowIndex,
-            donGia2026: updatedStation.donGia2026,
-            chenhLechDonGia: updatedStation.chenhLechDonGia,
-            deXuatT5: updatedStation.deXuatT5,
-            deXuatT6: updatedStation.deXuatT6,
-            deXuatT7: updatedStation.deXuatT7,
-            thoiDiemTangGia: updatedStation.thoiDiemTangGia,
-            ghiChu: updatedStation.ghiChu
+            action: 'updateStation',
+            ...updatedStation
           })
         });
       }
       setEditingStation(null);
+      setEditingPriceStation(null);
     } catch (err) {
-      console.error('Error saving price increase:', err);
+      console.error('Error saving station data:', err);
       setEditingStation(null);
+      setEditingPriceStation(null);
     } finally {
       setIsSaving(false);
     }
@@ -268,6 +274,14 @@ export default function App() {
     XLSX.writeFile(wb, `BaoCao_CongNo_CSHT_${new Date().toISOString().slice(0, 10)}.xlsx`);
   };
 
+  // Active filter name for KPI highlights
+  const activeFilterName = useMemo(() => {
+    if (filters.chiTangGia) return 'priceIncrease';
+    if (filters.ttStatus === 'paid') return 'paid';
+    if (filters.ttStatus === 'unpaid') return 'debt';
+    return '';
+  }, [filters]);
+
   return (
     <div style={{ maxWidth: '1440px', margin: '0 auto', padding: '1.5rem 1rem' }}>
       
@@ -284,7 +298,10 @@ export default function App() {
       {/* KPI Cards Section */}
       <KpiCards
         stats={stats}
-        onSelectPriceIncreaseOnly={() => setFilters(prev => ({ ...prev, chiTangGia: !prev.chiTangGia }))}
+        activeFilter={activeFilterName}
+        onSelectPriceIncreaseOnly={() => setFilters(prev => ({ ...prev, chiTangGia: !prev.chiTangGia, ttStatus: '' }))}
+        onSelectPaidOnly={() => setFilters(prev => ({ ...prev, ttStatus: prev.ttStatus === 'paid' ? '' : 'paid', chiTangGia: false }))}
+        onSelectDebtOnly={() => setFilters(prev => ({ ...prev, ttStatus: prev.ttStatus === 'unpaid' ? '' : 'unpaid', chiTangGia: false }))}
       />
 
       {/* Filter Section */}
@@ -303,7 +320,7 @@ export default function App() {
       {/* Special Panel: Price Increase Stations */}
       <PriceIncreasePanel
         data={filteredData}
-        onEditStation={(station) => setEditingStation(station)}
+        onEditStation={(station) => setEditingPriceStation(station)}
       />
 
       {/* Recharts Analytics Charts */}
@@ -321,21 +338,32 @@ export default function App() {
         Dashboard Quản Lý Công Nợ & Trạm Tăng Giá CSHT • Kết nối Google Apps Script & Google Sheets
       </footer>
 
-      {/* Modals */}
-      <EditPriceModal
+      {/* Full Station & Payment Edit Modal */}
+      <EditStationModal
         station={editingStation}
         isOpen={!!editingStation}
         onClose={() => setEditingStation(null)}
-        onSave={handleSavePriceIncrease}
+        onSave={handleSaveStation}
         isSaving={isSaving}
       />
 
+      {/* Price Increase Edit Modal */}
+      <EditPriceModal
+        station={editingPriceStation}
+        isOpen={!!editingPriceStation}
+        onClose={() => setEditingPriceStation(null)}
+        onSave={handleSaveStation}
+        isSaving={isSaving}
+      />
+
+      {/* Detail Modal */}
       <DetailModal
         station={viewingStation}
         isOpen={!!viewingStation}
         onClose={() => setViewingStation(null)}
       />
 
+      {/* API Config Modal */}
       <ApiConfigModal
         isOpen={isConfigOpen}
         onClose={() => setIsConfigOpen(false)}
