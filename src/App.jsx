@@ -407,8 +407,10 @@ export default function App() {
   };
 
   // Export to Excel
-  const handleExportExcel = () => {
-    const exportRows = filteredData.map((item, idx) => ({
+  // Export to Excel (supports custom data list and custom file name)
+  const handleExportExcel = (customList = null, customName = '') => {
+    const dataToExport = customList || filteredData;
+    const exportRows = dataToExport.map((item, idx) => ({
       'STT': idx + 1,
       'Site': item.site,
       'Tổ hạ tầng': item.toHaTang,
@@ -417,24 +419,28 @@ export default function App() {
       'Chủ hợp đồng': item.chuHopDong,
       'Số hợp đồng': item.soHopDong,
       'Đơn giá 2025': item.donGia2025,
-      'Đơn giá 2026': item.donGia2026,
+      'Đơn giá 2026 / Mới': item.donGia2026,
       'Tăng giá (Chênh lệch)': item.chenhLechDonGia,
+      'Thời điểm tăng giá': item.thoiDiemTangGia || 'Chưa xác định',
       'Đề xuất T5': item.deXuatT5,
       'Đề xuất T6': item.deXuatT6,
       'Đề xuất T7': item.deXuatT7,
-      'Thời điểm tăng giá': item.thoiDiemTangGia,
       'Còn nợ tồn 2025': item.no2025Ton,
       'Đã TT 2026': item.daThanhToan2026Den313,
+      'Số tháng nợ 2026': item.soThangNo2026,
+      'Số tiền nợ 2026': item.no2026Ton,
+      'Người thụ hưởng': item.nguoiThuHuong,
       'Số tài khoản': item.soTaiKhoan,
       'Tên ngân hàng': item.tenNganHang,
       'Tình trạng pháp lý': item.tinhTrangPhapLy,
       'Ghi chú': item.ghiChu
     }));
 
+    const nameTag = customName || (mainTab === 'debt2025' ? 'Tram_No_Ton_2025' : mainTab === 'unpaid2026' ? 'Tram_No_Tien_2026' : mainTab === 'priceIncrease' ? 'Tram_Tang_Gia_2026' : 'CongNo_CSHT');
     const ws = XLSX.utils.json_to_sheet(exportRows);
     const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, 'CongNo_CSHT');
-    XLSX.writeFile(wb, `BaoCao_CongNo_CSHT_${new Date().toISOString().slice(0, 10)}.xlsx`);
+    XLSX.utils.book_append_sheet(wb, ws, nameTag);
+    XLSX.writeFile(wb, `${nameTag}_${new Date().toISOString().slice(0, 10)}.xlsx`);
   };
 
   // Export specifically Price Increase Stations to Excel
@@ -607,6 +613,15 @@ export default function App() {
             <div style={{ color: '#f87171', fontSize: '0.95rem', fontWeight: 600 }}>
               ⚠️ Danh sách <strong>{filteredData.length} trạm</strong> còn nợ tồn năm 2025. Tổng tiền nợ tồn 2025: <strong>{(stats.totalNo2025Ton).toLocaleString('vi-VN')} ₫</strong>.
             </div>
+            <button 
+              className="btn btn-rose" 
+              onClick={() => handleExportExcel(filteredData, 'Tram_No_Ton_2025')}
+              style={{ padding: '0.45rem 1rem', fontSize: '0.85rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '0.5rem' }}
+              title="Xuất danh sách trạm nợ tồn 2025 ra Excel"
+            >
+              <Download size={16} />
+              <span>Xuất Excel Nợ Tồn 2025 ({filteredData.length} Trạm)</span>
+            </button>
           </div>
           <FilterBar
             filters={filters}
@@ -634,6 +649,15 @@ export default function App() {
             <div style={{ color: '#fb923c', fontSize: '0.95rem', fontWeight: 600 }}>
               🔴 Danh sách <strong>{filteredData.length} trạm</strong> chưa thanh toán đủ tiền năm 2026. Tổng tiền còn nợ 2026: <strong>{filteredData.reduce((s, i) => s + (i.no2026Ton || 0), 0).toLocaleString('vi-VN')} ₫</strong>.
             </div>
+            <button 
+              className="btn btn-amber" 
+              onClick={() => handleExportExcel(filteredData, 'Tram_No_Tien_2026')}
+              style={{ padding: '0.45rem 1rem', fontSize: '0.85rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '0.5rem' }}
+              title="Xuất danh sách trạm nợ tiền 2026 ra Excel"
+            >
+              <Download size={16} />
+              <span>Xuất Excel Nợ Tiền 2026 ({filteredData.length} Trạm)</span>
+            </button>
           </div>
           <FilterBar
             filters={filters}
