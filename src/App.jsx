@@ -48,17 +48,16 @@ export default function App() {
   // Sync tab changes with filters
   const handleTabChange = (tabId) => {
     setMainTab(tabId);
-    if (tabId === 'priceIncrease') {
-      setFilters(prev => ({ ...prev, chiTangGia: true, ttStatus: '' }));
-    } else if (tabId === 'debt2025') {
-      setFilters(prev => ({ ...prev, chiTangGia: false, ttStatus: 'debt2025' }));
-    } else if (tabId === 'unpaid2026') {
-      setFilters(prev => ({ ...prev, chiTangGia: false, ttStatus: 'unpaid2026' }));
-    } else if (tabId === 'paid2026') {
-      setFilters(prev => ({ ...prev, chiTangGia: false, ttStatus: 'paid2026' }));
-    } else {
-      setFilters(prev => ({ ...prev, chiTangGia: false, ttStatus: '' }));
-    }
+    setFilters({
+      search: '',
+      toHaTang: '',
+      site: '',
+      tinhTrangPhapLy: '',
+      chiTangGia: tabId === 'priceIncrease',
+      ttStatus: tabId === 'debt2025' ? 'debt2025' : tabId === 'unpaid2026' ? 'unpaid2026' : tabId === 'paid2026' ? 'paid2026' : '',
+      khoangTangGia: '',
+      thoiDiemTangGia: ''
+    });
   };
 
   // Helper to format date / thoiDiem string cleanly
@@ -277,9 +276,9 @@ export default function App() {
       if (filters.chiTangGia && !item.isTangGia) return false;
 
       // Trạng thái Thanh Toán / Nợ Tồn
-      if (filters.ttStatus === 'debt2025' && !(item.no2025Ton > 0)) return false;
-      if (filters.ttStatus === 'unpaid2026' && item.isDaThanhToan) return false;
-      if (filters.ttStatus === 'paid2026' && !item.isDaThanhToan) return false;
+      if ((filters.ttStatus === 'debt2025' || filters.ttStatus === 'debt') && !(item.no2025Ton > 0)) return false;
+      if ((filters.ttStatus === 'unpaid2026' || filters.ttStatus === 'unpaid') && item.isDaThanhToan) return false;
+      if ((filters.ttStatus === 'paid2026' || filters.ttStatus === 'paid') && !item.isDaThanhToan) return false;
 
       // Khoảng Tiền Tăng Giá
       if (filters.khoangTangGia) {
