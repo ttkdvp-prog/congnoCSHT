@@ -133,7 +133,11 @@ export default function DataTable({ data, onViewDetail, onEditPrice }) {
                     {row.thoiDiemTangGia ? (
                       <span className="badge badge-blue">{row.thoiDiemTangGia}</span>
                     ) : row.deXuatT5 > 0 ? (
-                      <span className="badge badge-amber">T5/{formatMoney(row.deXuatT5)}</span>
+                      <span className="badge badge-amber">Tháng 05/2026</span>
+                    ) : row.deXuatT6 > 0 ? (
+                      <span className="badge badge-amber">Tháng 06/2026</span>
+                    ) : row.deXuatT7 > 0 ? (
+                      <span className="badge badge-amber">Tháng 07/2026</span>
                     ) : (
                       <span style={{ color: 'var(--text-muted)' }}>-</span>
                     )}
