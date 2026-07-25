@@ -101,8 +101,25 @@ export default function App() {
       const deXuatT5 = row.deXuatT5 || 0;
       const deXuatT6 = row.deXuatT6 || 0;
       const deXuatT7 = row.deXuatT7 || 0;
+      const rawChenhLech = row.chenhLechDonGia || 0;
 
-      const donGia2026Effective = donGia2026Raw > 0 ? donGia2026Raw : (deXuatT5 > 0 ? deXuatT5 : (deXuatT6 > 0 ? deXuatT6 : (deXuatT7 > 0 ? deXuatT7 : donGia2025)));
+      const maxDeXuatPrice = Math.max(deXuatT5, deXuatT6, deXuatT7);
+
+      let donGia2026Effective = 0;
+      if (maxDeXuatPrice > donGia2025 && maxDeXuatPrice > 0) {
+        donGia2026Effective = maxDeXuatPrice;
+      } else if (donGia2026Raw > donGia2025 && donGia2025 > 0) {
+        donGia2026Effective = donGia2026Raw;
+      } else if (rawChenhLech > 0 && donGia2025 > 0) {
+        donGia2026Effective = donGia2025 + rawChenhLech;
+      } else if (donGia2026Raw > 0) {
+        donGia2026Effective = donGia2026Raw;
+      } else {
+        donGia2026Effective = donGia2025;
+      }
+
+      const chenhLechDonGia = (donGia2026Effective > donGia2025 && donGia2025 > 0) ? (donGia2026Effective - donGia2025) : 0;
+      const isTangGia = chenhLechDonGia > 0;
       const daTT2026 = row.daThanhToan2026Den313 || 0;
 
       let countMonthsPaid2026 = 0;
@@ -128,6 +145,8 @@ export default function App() {
         ...row,
         thoiDiemTangGia,
         donGia2026: donGia2026Effective,
+        chenhLechDonGia,
+        isTangGia,
         tongHapDong2026,
         daThanhToan2026Den313: daTT2026,
         no2026Ton,

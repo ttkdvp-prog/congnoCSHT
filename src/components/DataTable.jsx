@@ -85,7 +85,7 @@ export default function DataTable({ data, onViewDetail, onEditPrice }) {
               <th onClick={() => handleSort('tenCSHT')} style={{ cursor: 'pointer' }}>TÊN CSHT</th>
               <th onClick={() => handleSort('chuHopDong')} style={{ cursor: 'pointer' }}>CHỦ HỢP ĐỒNG</th>
               <th onClick={() => handleSort('donGia2025')} style={{ cursor: 'pointer', textAlign: 'right' }}>ĐƠN GIÁ 2025</th>
-              <th onClick={() => handleSort('donGia2026')} style={{ cursor: 'pointer', textAlign: 'right' }}>ĐƠN GIÁ 2026</th>
+              <th onClick={() => handleSort('donGia2026')} style={{ cursor: 'pointer', textAlign: 'right' }}>ĐƠN GIÁ 2026 / MỚI</th>
               <th onClick={() => handleSort('chenhLechDonGia')} style={{ cursor: 'pointer', textAlign: 'right' }}>TĂNG GIÁ</th>
               <th onClick={() => handleSort('thoiDiemTangGia')} style={{ cursor: 'pointer' }}>THỜI ĐIỂM TĂNG</th>
               <th onClick={() => handleSort('no2025Ton')} style={{ cursor: 'pointer', textAlign: 'right' }}>NỢ TỒN 2025</th>

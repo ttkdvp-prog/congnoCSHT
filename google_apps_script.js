@@ -122,23 +122,23 @@ function doGet(e) {
       const donGia2026Raw = parseVnNumber(row[idxDonGia2026]);
       const deXuatT5 = parseVnNumber(row[idxDeXuatT5]);
       const deXuatT6 = parseVnNumber(row[idxDeXuatT6]);
-      const deXuatT7 = parseVnNumber(row[idxDeXuatT7]);
-      const thoiDiemTangGia = formatDate(row[idxThoiDiem]);
+      const rawChenhLech = parseVnNumber(row[idxChenhLech]);
+      const maxDeXuatPrice = Math.max(deXuatT5, deXuatT6, deXuatT7);
 
-      let chenhLechDonGia = parseVnNumber(row[idxChenhLech]);
-      if (!chenhLechDonGia) {
-        if (donGia2026Raw > donGia2025 && donGia2025 > 0) {
-          chenhLechDonGia = donGia2026Raw - donGia2025;
-        } else if (deXuatT5 > donGia2025 && donGia2025 > 0) {
-          chenhLechDonGia = deXuatT5 - donGia2025;
-        } else if (deXuatT6 > donGia2025 && donGia2025 > 0) {
-          chenhLechDonGia = deXuatT6 - donGia2025;
-        } else if (deXuatT7 > donGia2025 && donGia2025 > 0) {
-          chenhLechDonGia = deXuatT7 - donGia2025;
-        }
+      let donGia2026 = 0;
+      if (maxDeXuatPrice > donGia2025 && maxDeXuatPrice > 0) {
+        donGia2026 = maxDeXuatPrice;
+      } else if (donGia2026Raw > donGia2025 && donGia2025 > 0) {
+        donGia2026 = donGia2026Raw;
+      } else if (rawChenhLech > 0 && donGia2025 > 0) {
+        donGia2026 = donGia2025 + rawChenhLech;
+      } else if (donGia2026Raw > 0) {
+        donGia2026 = donGia2026Raw;
+      } else {
+        donGia2026 = donGia2025;
       }
 
-      const donGia2026 = donGia2026Raw > 0 ? donGia2026Raw : (deXuatT5 > 0 ? deXuatT5 : donGia2025);
+      const chenhLechDonGia = (donGia2026 > donGia2025 && donGia2025 > 0) ? (donGia2026 - donGia2025) : 0;
       const isTangGia = chenhLechDonGia > 0;
 
       const tong2025DaTra = parseVnNumber(row[idxTong2025DaTra]);
