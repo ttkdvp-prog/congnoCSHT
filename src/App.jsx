@@ -120,6 +120,12 @@ export default function App() {
 
       const chenhLechDonGia = (donGia2026Effective > donGia2025 && donGia2025 > 0) ? (donGia2026Effective - donGia2025) : 0;
       const isTangGia = chenhLechDonGia > 0;
+      const rawNo2025Ton = row.rawNo2025Ton !== undefined ? row.rawNo2025Ton : (row.no2025Ton || 0);
+      const tong2025DaTra = row.tong2025DaTra || 0;
+      const tongChiTiet2025 = row.tongChiTiet2025 || 0;
+      const paid2025Sum = Math.max(tong2025DaTra, tongChiTiet2025);
+      const no2025Ton = Math.max(0, rawNo2025Ton - paid2025Sum);
+
       const daTT2026 = row.daThanhToan2026Den313 || 0;
 
       let countMonthsPaid2026 = 0;
@@ -147,6 +153,7 @@ export default function App() {
         donGia2026: donGia2026Effective,
         chenhLechDonGia,
         isTangGia,
+        no2025Ton,
         tongHapDong2026,
         daThanhToan2026Den313: daTT2026,
         no2026Ton,

@@ -142,7 +142,11 @@ function doGet(e) {
       const isTangGia = chenhLechDonGia > 0;
 
       const tong2025DaTra = parseVnNumber(row[idxTong2025DaTra]);
-      const no2025Ton = parseVnNumber(row[idxNo2025Ton]);
+      const rawNo2025Ton = parseVnNumber(row[idxNo2025Ton]);
+      const tongChiTiet2025 = parseVnNumber(row[idxTongChiTiet2025]);
+
+      const paid2025Sum = Math.max(tong2025DaTra, tongChiTiet2025);
+      const no2025Ton = Math.max(0, rawNo2025Ton - paid2025Sum);
 
       const nguoiThuHuong = String(row[idxNguoiThuHuong] || '').trim();
       const soTaiKhoan = String(row[idxSoTaiKhoan] || '').trim();
