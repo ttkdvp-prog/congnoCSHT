@@ -174,7 +174,12 @@ function doGet(e) {
       const daThanhToan2026Den313 = daThanhToan2026Den313Raw > 0 ? daThanhToan2026Den313Raw : monthlyPaid2026Sum;
       const ghiChu = String(row[idxGhiChu] || '').trim();
 
-      const isDaThanhToan = daThanhToan2026Den313 > 0 || (no2025Ton === 0 && tong2025DaTra > 0);
+      const tongHapDong2026 = donGia2026 * 12;
+      const no2026Ton = Math.max(0, tongHapDong2026 - daThanhToan2026Den313);
+      const thangDaTT2026 = donGia2026 > 0 ? Math.min(12, Math.round(daThanhToan2026Den313 / donGia2026)) : (soThangCoTT || 0);
+      const soThangNo2026 = donGia2026 > 0 ? Math.max(0, 12 - thangDaTT2026) : 0;
+
+      const isDaThanhToan = daThanhToan2026Den313 >= tongHapDong2026 && tongHapDong2026 > 0;
 
       records.push({
         rowIndex: i + 1,
@@ -200,6 +205,11 @@ function doGet(e) {
         isTangGia: isTangGia,
         tong2025DaTra: tong2025DaTra,
         no2025Ton: no2025Ton,
+        tongHapDong2026: tongHapDong2026,
+        daThanhToan2026Den313: daThanhToan2026Den313,
+        no2026Ton: no2026Ton,
+        thangDaTT2026: thangDaTT2026,
+        soThangNo2026: soThangNo2026,
         nguoiThuHuong: nguoiThuHuong,
         soTaiKhoan: soTaiKhoan,
         tenNganHang: tenNganHang,
@@ -210,7 +220,6 @@ function doGet(e) {
         soThangCoTT: soThangCoTT,
         tinhTrangPhapLy: tinhTrangPhapLy,
         ngayThanhToan: ngayThanhToan,
-        daThanhToan2026Den313: daThanhToan2026Den313,
         isDaThanhToan: isDaThanhToan,
         ghiChu: ghiChu
       });
@@ -221,7 +230,8 @@ function doGet(e) {
     if (params.site) filtered = filtered.filter(function(r) { return r.site === params.site; });
     if (params.chiTangGia === 'true') filtered = filtered.filter(function(r) { return r.isTangGia; });
     if (params.ttStatus === 'paid') filtered = filtered.filter(function(r) { return r.isDaThanhToan; });
-    if (params.ttStatus === 'unpaid') filtered = filtered.filter(function(r) { return !r.isDaThanhToan || r.no2025Ton > 0; });
+    if (params.ttStatus === 'unpaid2026') filtered = filtered.filter(function(r) { return r.no2026Ton > 0 && r.donGia2026 > 0; });
+    if (params.ttStatus === 'debt2025') filtered = filtered.filter(function(r) { return r.no2025Ton > 0; });
     if (params.search) {
       var q = params.search.toLowerCase();
       filtered = filtered.filter(function(r) {

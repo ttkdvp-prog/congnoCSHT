@@ -1,5 +1,5 @@
 import React from 'react';
-import { LayoutDashboard, Flame, CheckCircle, Table, BarChart2 } from 'lucide-react';
+import { LayoutDashboard, Flame, AlertCircle, Clock, CheckCircle2, Table } from 'lucide-react';
 
 export default function TabBar({ activeTab, onTabChange, counts }) {
   const tabs = [
@@ -18,10 +18,24 @@ export default function TabBar({ activeTab, onTabChange, counts }) {
       color: '#f59e0b'
     },
     {
-      id: 'payments',
-      label: 'Thanh Toán & Nợ Tồn',
-      icon: CheckCircle,
-      badge: `${counts.paid} đã TT • ${counts.debt} nợ tồn`,
+      id: 'debt2025',
+      label: 'Còn Nợ Tồn 2025',
+      icon: AlertCircle,
+      badge: `${counts.debt2025} trạm`,
+      color: '#ef4444'
+    },
+    {
+      id: 'unpaid2026',
+      label: 'Chưa TT & Nợ 2026',
+      icon: Clock,
+      badge: `${counts.unpaid2026} trạm`,
+      color: '#f97316'
+    },
+    {
+      id: 'paid2026',
+      label: 'Đã TT Đủ 2026',
+      icon: CheckCircle2,
+      badge: `${counts.paid2026} trạm`,
       color: '#10b981'
     },
     {
@@ -45,19 +59,19 @@ export default function TabBar({ activeTab, onTabChange, counts }) {
             style={{
               display: 'flex',
               alignItems: 'center',
-              gap: '0.6rem',
-              padding: '0.65rem 1.25rem',
+              gap: '0.55rem',
+              padding: '0.6rem 1.1rem',
               borderRadius: 'var(--radius-md)',
               border: isActive ? `1px solid ${tab.color}` : '1px solid transparent',
               background: isActive ? `${tab.color}20` : 'transparent',
               color: isActive ? '#fff' : 'var(--text-secondary)',
               fontWeight: isActive ? 700 : 500,
-              fontSize: '0.9rem',
+              fontSize: '0.875rem',
               cursor: 'pointer',
-              transition: 'all 0.2s ease shadow'
+              transition: 'all 0.2s ease'
             }}
           >
-            <Icon size={18} style={{ color: isActive ? tab.color : 'var(--text-muted)' }} />
+            <Icon size={17} style={{ color: isActive ? tab.color : 'var(--text-muted)' }} />
             <span>{tab.label}</span>
             {tab.badge && (
               <span 
@@ -65,7 +79,8 @@ export default function TabBar({ activeTab, onTabChange, counts }) {
                 style={{ 
                   background: isActive ? `${tab.color}30` : 'var(--bg-surface)', 
                   color: isActive ? '#fff' : 'var(--text-muted)',
-                  fontSize: '0.75rem'
+                  fontSize: '0.725rem',
+                  padding: '0.15rem 0.5rem'
                 }}
               >
                 {tab.badge}

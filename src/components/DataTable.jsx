@@ -89,6 +89,9 @@ export default function DataTable({ data, onViewDetail, onEditPrice }) {
               <th onClick={() => handleSort('chenhLechDonGia')} style={{ cursor: 'pointer', textAlign: 'right' }}>TĂNG GIÁ</th>
               <th onClick={() => handleSort('thoiDiemTangGia')} style={{ cursor: 'pointer' }}>THỜI ĐIỂM TĂNG</th>
               <th onClick={() => handleSort('no2025Ton')} style={{ cursor: 'pointer', textAlign: 'right' }}>NỢ TỒN 2025</th>
+              <th onClick={() => handleSort('daThanhToan2026Den313')} style={{ cursor: 'pointer', textAlign: 'right' }}>ĐÃ TT 2026</th>
+              <th onClick={() => handleSort('soThangNo2026')} style={{ cursor: 'pointer', textAlign: 'center' }}>SỐ THÁNG NỢ 2026</th>
+              <th onClick={() => handleSort('no2026Ton')} style={{ cursor: 'pointer', textAlign: 'right' }}>NỢ 2026</th>
               <th>TÌNH TRẠNG PHÁP LÝ</th>
               <th style={{ textAlign: 'center' }}>THAO TÁC</th>
             </tr>
@@ -96,7 +99,7 @@ export default function DataTable({ data, onViewDetail, onEditPrice }) {
           <tbody>
             {currentRows.length === 0 ? (
               <tr>
-                <td colSpan={12} style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-muted)' }}>
+                <td colSpan={15} style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-muted)' }}>
                   Không tìm thấy trạm phù hợp với bộ lọc.
                 </td>
               </tr>
@@ -145,6 +148,27 @@ export default function DataTable({ data, onViewDetail, onEditPrice }) {
                       </span>
                     ) : (
                       <span style={{ color: 'var(--accent-emerald)', fontSize: '0.8rem' }}>Đã hết nợ</span>
+                    )}
+                  </td>
+                  <td style={{ textAlign: 'right', color: 'var(--accent-emerald)', fontWeight: 600 }}>
+                    {formatMoney(row.daThanhToan2026Den313)}
+                  </td>
+                  <td style={{ textAlign: 'center' }}>
+                    {row.soThangNo2026 > 0 ? (
+                      <span className="badge badge-rose" style={{ fontWeight: 700 }}>
+                        Nợ {row.soThangNo2026} tháng
+                      </span>
+                    ) : (
+                      <span className="badge badge-emerald">Đủ 12T</span>
+                    )}
+                  </td>
+                  <td style={{ textAlign: 'right' }}>
+                    {row.no2026Ton > 0 ? (
+                      <span style={{ color: 'var(--accent-amber)', fontWeight: 700 }}>
+                        {formatMoney(row.no2026Ton)}
+                      </span>
+                    ) : (
+                      <span style={{ color: 'var(--accent-emerald)', fontSize: '0.8rem' }}>0 ₫</span>
                     )}
                   </td>
                   <td>

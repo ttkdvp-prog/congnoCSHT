@@ -51,11 +51,13 @@ export default function App() {
     setMainTab(tabId);
     if (tabId === 'priceIncrease') {
       setFilters(prev => ({ ...prev, chiTangGia: true, ttStatus: '' }));
-    } else if (tabId === 'payments') {
-      setFilters(prev => ({ ...prev, chiTangGia: false, ttStatus: 'unpaid' }));
-    } else if (tabId === 'allStations') {
-      setFilters(prev => ({ ...prev, chiTangGia: false, ttStatus: '' }));
-    } else if (tabId === 'overview') {
+    } else if (tabId === 'debt2025') {
+      setFilters(prev => ({ ...prev, chiTangGia: false, ttStatus: 'debt2025' }));
+    } else if (tabId === 'unpaid2026') {
+      setFilters(prev => ({ ...prev, chiTangGia: false, ttStatus: 'unpaid2026' }));
+    } else if (tabId === 'paid2026') {
+      setFilters(prev => ({ ...prev, chiTangGia: false, ttStatus: 'paid2026' }));
+    } else {
       setFilters(prev => ({ ...prev, chiTangGia: false, ttStatus: '' }));
     }
   };
@@ -99,7 +101,7 @@ export default function App() {
       site: '',
       tinhTrangPhapLy: '',
       chiTangGia: mainTab === 'priceIncrease',
-      ttStatus: mainTab === 'payments' ? 'unpaid' : '',
+      ttStatus: mainTab === 'debt2025' ? 'debt2025' : mainTab === 'unpaid2026' ? 'unpaid2026' : mainTab === 'paid2026' ? 'paid2026' : '',
       khoangTangGia: '',
       thoiDiemTangGia: ''
     });
@@ -158,10 +160,10 @@ export default function App() {
       // Chỉ Trạm Tăng Giá
       if (filters.chiTangGia && !item.isTangGia) return false;
 
-      // Trạng thái Thanh Toán (Paid vs Debt/Unpaid)
-      const isPaid = item.daThanhToan2026Den313 > 0 || (item.no2025Ton === 0 && item.tong2025DaTra > 0);
-      if (filters.ttStatus === 'paid' && !isPaid) return false;
-      if (filters.ttStatus === 'unpaid' && isPaid && !(item.no2025Ton > 0)) return false;
+      // Trạng thái Thanh Toán / Nợ Tồn
+      if (filters.ttStatus === 'debt2025' && !(item.no2025Ton > 0)) return false;
+      if (filters.ttStatus === 'unpaid2026' && !(item.no2026Ton > 0 && item.donGia2026 > 0)) return false;
+      if (filters.ttStatus === 'paid2026' && !(item.daThanhToan2026Den313 > 0 && item.no2026Ton === 0)) return false;
 
       // Khoảng Tiền Tăng Giá
       if (filters.khoangTangGia) {
@@ -195,7 +197,7 @@ export default function App() {
     const tangGiaCount = tangGiaList.length;
     const totalTangGiaAmount = tangGiaList.reduce((sum, i) => sum + (i.chenhLechDonGia || 0), 0);
 
-    const paidList = data.filter(i => i.daThanhToan2026Den313 > 0 || (i.no2025Ton === 0 && i.tong2025DaTra > 0));
+    const paidList = data.filter(i => i.daThanhToan2026Den313 > 0 && i.no2026Ton === 0);
     const paidCount = paidList.length;
 
     const debtList = data.filter(i => i.no2025Ton > 0);
@@ -228,8 +230,9 @@ export default function App() {
   const tabCounts = useMemo(() => ({
     total: data.length,
     tangGia: data.filter(i => i.isTangGia).length,
-    paid: data.filter(i => i.daThanhToan2026Den313 > 0 || (i.no2025Ton === 0 && i.tong2025DaTra > 0)).length,
-    debt: data.filter(i => i.no2025Ton > 0).length
+    debt2025: data.filter(i => i.no2025Ton > 0).length,
+    unpaid2026: data.filter(i => i.no2026Ton > 0 && i.donGia2026 > 0).length,
+    paid2026: data.filter(i => i.daThanhToan2026Den313 > 0 && i.no2026Ton === 0).length
   }), [data]);
 
   // Save / Update Full Station Data (Sync with Google Sheets)
@@ -403,8 +406,8 @@ export default function App() {
             stats={stats}
             activeFilter={activeFilterName}
             onSelectPriceIncreaseOnly={() => handleTabChange('priceIncrease')}
-            onSelectPaidOnly={() => handleTabChange('payments')}
-            onSelectDebtOnly={() => handleTabChange('payments')}
+            onSelectPaidOnly={() => handleTabChange('paid2026')}
+            onSelectDebtOnly={() => handleTabChange('debt2025')}
           />
           <AnalyticsSection data={data} />
           <PriceIncreasePanel
@@ -440,16 +443,14 @@ export default function App() {
         </>
       )}
 
-      {/* TAB 3: PAYMENTS & DEBT STATUS */}
-      {mainTab === 'payments' && (
+      {/* TAB 3: DEBT 2025 STATIONS */}
+      {mainTab === 'debt2025' && (
         <>
-          <KpiCards
-            stats={stats}
-            activeFilter={activeFilterName}
-            onSelectPriceIncreaseOnly={() => handleTabChange('priceIncrease')}
-            onSelectPaidOnly={() => setFilters(prev => ({ ...prev, ttStatus: 'paid' }))}
-            onSelectDebtOnly={() => setFilters(prev => ({ ...prev, ttStatus: 'unpaid' }))}
-          />
+          <div style={{ background: 'rgba(239, 68, 68, 0.1)', border: '1px solid rgba(239, 68, 68, 0.3)', padding: '1rem 1.25rem', borderRadius: 'var(--radius-md)', marginBottom: '1.25rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.75rem' }}>
+            <div style={{ color: '#f87171', fontSize: '0.95rem', fontWeight: 600 }}>
+              ⚠️ Danh sách <strong>{filteredData.length} trạm</strong> còn nợ tồn năm 2025. Tổng tiền nợ tồn 2025: <strong>{(stats.totalNo2025Ton).toLocaleString('vi-VN')} ₫</strong>.
+            </div>
+          </div>
           <FilterBar
             filters={filters}
             onChange={handleFilterChange}
@@ -461,7 +462,6 @@ export default function App() {
             totalFiltered={filteredData.length}
             totalAll={data.length}
           />
-          <AnalyticsSection data={filteredData} />
           <DataTable
             data={filteredData}
             onViewDetail={(station) => setViewingStation(station)}
@@ -470,7 +470,61 @@ export default function App() {
         </>
       )}
 
-      {/* TAB 4: ALL STATIONS MASTER TABLE */}
+      {/* TAB 4: UNPAID 2026 STATIONS & MONTHS OWED */}
+      {mainTab === 'unpaid2026' && (
+        <>
+          <div style={{ background: 'rgba(249, 115, 22, 0.1)', border: '1px solid rgba(249, 115, 22, 0.3)', padding: '1rem 1.25rem', borderRadius: 'var(--radius-md)', marginBottom: '1.25rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.75rem' }}>
+            <div style={{ color: '#fb923c', fontSize: '0.95rem', fontWeight: 600 }}>
+              🔴 Danh sách <strong>{filteredData.length} trạm</strong> chưa thanh toán đủ tiền năm 2026. Tổng tiền còn nợ 2026: <strong>{filteredData.reduce((s, i) => s + (i.no2026Ton || 0), 0).toLocaleString('vi-VN')} ₫</strong>.
+            </div>
+          </div>
+          <FilterBar
+            filters={filters}
+            onChange={handleFilterChange}
+            onReset={handleResetFilters}
+            toHaTangOptions={toHaTangOptions}
+            siteOptions={siteOptions}
+            phapLyOptions={phapLyOptions}
+            thoiDiemOptions={thoiDiemOptions}
+            totalFiltered={filteredData.length}
+            totalAll={data.length}
+          />
+          <DataTable
+            data={filteredData}
+            onViewDetail={(station) => setViewingStation(station)}
+            onEditPrice={(station) => setEditingStation(station)}
+          />
+        </>
+      )}
+
+      {/* TAB 5: PAID 2026 STATIONS */}
+      {mainTab === 'paid2026' && (
+        <>
+          <div style={{ background: 'rgba(16, 185, 129, 0.1)', border: '1px solid rgba(16, 185, 129, 0.3)', padding: '1rem 1.25rem', borderRadius: 'var(--radius-md)', marginBottom: '1.25rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.75rem' }}>
+            <div style={{ color: '#34d399', fontSize: '0.95rem', fontWeight: 600 }}>
+              ✅ Danh sách <strong>{filteredData.length} trạm</strong> đã thanh toán hoàn tất tiền năm 2026.
+            </div>
+          </div>
+          <FilterBar
+            filters={filters}
+            onChange={handleFilterChange}
+            onReset={handleResetFilters}
+            toHaTangOptions={toHaTangOptions}
+            siteOptions={siteOptions}
+            phapLyOptions={phapLyOptions}
+            thoiDiemOptions={thoiDiemOptions}
+            totalFiltered={filteredData.length}
+            totalAll={data.length}
+          />
+          <DataTable
+            data={filteredData}
+            onViewDetail={(station) => setViewingStation(station)}
+            onEditPrice={(station) => setEditingStation(station)}
+          />
+        </>
+      )}
+
+      {/* TAB 6: ALL STATIONS MASTER TABLE */}
       {mainTab === 'allStations' && (
         <>
           <FilterBar
