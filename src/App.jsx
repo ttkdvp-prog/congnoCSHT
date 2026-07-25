@@ -17,7 +17,8 @@ import { AlertTriangle, ExternalLink, Settings } from 'lucide-react';
 
 export default function App() {
   const [data, setData] = useState(rawFallbackData);
-  const [apiUrl, setApiUrl] = useState(() => localStorage.getItem('csht_apps_script_url') || '');
+  const DEFAULT_GAS_URL = 'https://script.google.com/macros/s/AKfycbx14yyyw2fJ4rW3OdxcfOlli8OKPlr84-vxEhPkI9yMcTnM2BT8WeDs75hzx9h0mEPs/exec';
+  const [apiUrl, setApiUrl] = useState(() => localStorage.getItem('csht_apps_script_url') || DEFAULT_GAS_URL);
   const [isLive, setIsLive] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
