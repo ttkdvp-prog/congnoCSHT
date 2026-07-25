@@ -14,7 +14,7 @@ import EditPriceModal from './components/EditPriceModal';
 import EditStationModal from './components/EditStationModal';
 import DetailModal from './components/DetailModal';
 import ApiConfigModal from './components/ApiConfigModal';
-import { AlertTriangle, Settings } from 'lucide-react';
+import { AlertTriangle, Settings, Download } from 'lucide-react';
 
 export default function App() {
   const DEFAULT_GAS_URL = 'https://script.google.com/macros/s/AKfycbx14yyyw2fJ4rW3OdxcfOlli8OKPlr84-vxEhPkI9yMcTnM2BT8WeDs75hzx9h0mEPs/exec';
@@ -611,7 +611,7 @@ export default function App() {
         <>
           <div style={{ background: 'rgba(239, 68, 68, 0.1)', border: '1px solid rgba(239, 68, 68, 0.3)', padding: '1rem 1.25rem', borderRadius: 'var(--radius-md)', marginBottom: '1.25rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.75rem' }}>
             <div style={{ color: '#f87171', fontSize: '0.95rem', fontWeight: 600 }}>
-              ⚠️ Danh sách <strong>{filteredData.length} trạm</strong> còn nợ tồn năm 2025. Tổng tiền nợ tồn 2025: <strong>{(stats.totalNo2025Ton).toLocaleString('vi-VN')} ₫</strong>.
+              ⚠️ Danh sách <strong>{filteredData.length} trạm</strong> còn nợ tồn năm 2025. Tổng tiền nợ tồn 2025: <strong>{(stats?.totalNo2025Ton || 0).toLocaleString('vi-VN')} ₫</strong>.
             </div>
             <button 
               className="btn btn-rose" 
