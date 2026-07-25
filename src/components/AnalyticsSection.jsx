@@ -3,9 +3,9 @@ import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Legend,
   PieChart, Pie, Cell
 } from 'recharts';
-import { BarChart3, PieChart as PieIcon, LineChart } from 'lucide-react';
+import { BarChart3, PieChart as PieIcon } from 'lucide-react';
 
-const COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#f43f5e', '#8b5cf6', '#06b6d4', '#ec4899'];
+const COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#f43f5e', '#8b5cf6', '#06b6d4', '#ec4899', '#64748b'];
 
 export default function AnalyticsSection({ data }) {
   // Aggregate data by Tổ Hạ Tầng
@@ -33,16 +33,31 @@ export default function AnalyticsSection({ data }) {
     daThanhToan2026Trieu: Math.round(d.daThanhToan2026 / 1000000)
   }));
 
-  // Aggregate by Tình Trạng Pháp Lý
-  const phapLyMap = {};
+  // Aggregate by Tình Trạng Pháp Lý (Group into Top 5 + Khác for clean UI)
+  const rawPhapLyMap = {};
   data.forEach(item => {
-    const rawKey = item.tinhTrangPhapLy || 'Chưa cập nhật';
-    const key = rawKey.length > 25 ? rawKey.substring(0, 25) + '...' : rawKey;
-    if (!phapLyMap[key]) phapLyMap[key] = 0;
-    phapLyMap[key] += 1;
+    let key = (item.tinhTrangPhapLy || 'Chưa cập nhật').trim();
+    if (!key) key = 'Chưa cập nhật';
+    // Clean common prefixes or simplify long status texts
+    if (key.toLowerCase().includes('không bìa đất') || key.toLowerCase().includes('thiếu bìa')) {
+      key = 'Thiếu/Không bìa đất';
+    } else if (key.toLowerCase().includes('chỉ có hd') || key.toLowerCase().includes('hợp đồng')) {
+      key = 'Chỉ có HĐ / Phụ lục';
+    } else if (key.toLowerCase().includes('chưa có cccd') || key.toLowerCase().includes('thiếu cccd')) {
+      key = 'Thiếu CCCD';
+    }
+    if (!rawPhapLyMap[key]) rawPhapLyMap[key] = 0;
+    rawPhapLyMap[key] += 1;
   });
 
-  const pieData = Object.entries(phapLyMap).map(([name, value]) => ({ name, value }));
+  const sortedPhapLy = Object.entries(rawPhapLyMap).sort((a, b) => b[1] - a[1]);
+  const topPhapLy = sortedPhapLy.slice(0, 5);
+  const otherSum = sortedPhapLy.slice(5).reduce((sum, item) => sum + item[1], 0);
+
+  const pieData = topPhapLy.map(([name, value]) => ({ name, value }));
+  if (otherSum > 0) {
+    pieData.push({ name: 'Tình trạng khác', value: otherSum });
+  }
 
   const formatMoneyTrieu = (value) => `${value.toLocaleString('vi-VN')} triệu ₫`;
 
@@ -58,13 +73,13 @@ export default function AnalyticsSection({ data }) {
       <div className="glass-panel" style={{ padding: '1.25rem' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1rem', fontWeight: 600, fontSize: '0.95rem' }}>
           <BarChart3 size={18} style={{ color: 'var(--accent-blue)' }} />
-          <span>NỢ TỒN 2025 & ĐÃ THANH TOÁN 2026 THEO TỔ HẠ TẦNG (ĐV: TRIỆU VNĐ)</span>
+          <span>NỢ TỒN 2025 & ĐÃ THANH TOÁN 2026 THEO TỔ HẠ TẦNG (TRIỆU VNĐ)</span>
         </div>
-        <div style={{ width: '100%', height: 280 }}>
+        <div style={{ width: '100%', height: 300 }}>
           <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={barData} margin={{ top: 10, right: 10, left: 10, bottom: 25 }}>
+            <BarChart data={barData} margin={{ top: 10, right: 10, left: 10, bottom: 35 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
-              <XAxis dataKey="toHaTang" stroke="var(--text-secondary)" tick={{ fontSize: 11 }} angle={-15} textAnchor="end" />
+              <XAxis dataKey="toHaTang" stroke="var(--text-secondary)" tick={{ fontSize: 11 }} angle={-20} textAnchor="end" />
               <YAxis stroke="var(--text-secondary)" tick={{ fontSize: 11 }} />
               <Tooltip 
                 formatter={(val) => formatMoneyTrieu(val)}
@@ -84,18 +99,18 @@ export default function AnalyticsSection({ data }) {
           <PieIcon size={18} style={{ color: 'var(--accent-purple)' }} />
           <span>PHÂN BỔ TÌNH TRẠNG PHÁP LÝ HỢP ĐỒNG</span>
         </div>
-        <div style={{ width: '100%', height: 280, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <div style={{ width: '100%', height: 300 }}>
           <ResponsiveContainer width="100%" height="100%">
             <PieChart>
               <Pie
                 data={pieData}
                 cx="50%"
-                cy="50%"
-                innerRadius={60}
-                outerRadius={95}
+                cy="45%"
+                innerRadius={55}
+                outerRadius={85}
                 paddingAngle={4}
                 dataKey="value"
-                label={({ name, percent }) => `${(percent * 100).toFixed(0)}%`}
+                label={({ percent }) => `${(percent * 100).toFixed(0)}%`}
               >
                 {pieData.map((entry, index) => (
                   <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
@@ -105,7 +120,12 @@ export default function AnalyticsSection({ data }) {
                 formatter={(val) => [`${val} trạm`, 'Số lượng']}
                 contentStyle={{ background: '#1e293b', border: '1px solid #334155', borderRadius: '8px', color: '#fff' }}
               />
-              <Legend layout="vertical" align="right" verticalAlign="middle" wrapperStyle={{ fontSize: '11px', color: '#94a3b8' }} />
+              <Legend 
+                verticalAlign="bottom" 
+                height={40}
+                iconType="circle"
+                wrapperStyle={{ fontSize: '11px', color: '#94a3b8', paddingTop: '10px' }} 
+              />
             </PieChart>
           </ResponsiveContainer>
         </div>
