@@ -123,22 +123,6 @@ export default function Header({
             <Download size={16} />
             <span>Xuất Excel</span>
           </button>
-
-          <button className="btn btn-amber" onClick={onOpenConfig} title="Cấu hình Google Apps Script API URL">
-            <Settings size={16} />
-            <span>Cấu hình API</span>
-          </button>
-
-          <a 
-            href="https://github.com/ttkdvp-prog/congnoCSHT" 
-            target="_blank" 
-            rel="noreferrer"
-            className="btn btn-secondary"
-            title="Repository GitHub"
-          >
-            <Github size={16} />
-            <span>GitHub</span>
-          </a>
         </div>
 
       </div>
