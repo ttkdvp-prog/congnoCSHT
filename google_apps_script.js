@@ -6,6 +6,37 @@
 
 const SHEET_NAME = 'Theo dõi đầy đủ';
 
+function parseVnNumber(val) {
+  if (val === null || val === undefined || val === '') return 0;
+  if (typeof val === 'number') return isNaN(val) ? 0 : val;
+
+  var str = String(val).trim().replace(/[^\d.,-]/g, '');
+  if (!str) return 0;
+
+  if (str.indexOf('.') !== -1 && str.indexOf(',') !== -1) {
+    if (str.lastIndexOf('.') > str.lastIndexOf(',')) {
+      str = str.replace(/,/g, '');
+    } else {
+      str = str.replace(/\./g, '').replace(/,/g, '.');
+    }
+  } else if (str.indexOf('.') !== -1) {
+    var parts = str.split('.');
+    if (parts.length > 2 || (parts.length === 2 && parts[1].length === 3)) {
+      str = str.replace(/\./g, '');
+    }
+  } else if (str.indexOf(',') !== -1) {
+    var parts = str.split(',');
+    if (parts.length > 2 || (parts.length === 2 && parts[1].length === 3)) {
+      str = str.replace(/,/g, '');
+    } else {
+      str = str.replace(/,/g, '.');
+    }
+  }
+
+  var num = parseFloat(str);
+  return isNaN(num) ? 0 : num;
+}
+
 function doGet(e) {
   try {
     const params = e ? e.parameter : {};
@@ -27,7 +58,6 @@ function doGet(e) {
       return String(str || '').replace(/[\r\n]+/g, ' ').replace(/\s+/g, ' ').trim().toLowerCase();
     };
 
-    // Robust Fuzzy Column Finder
     const findColIdx = function(pattern) {
       return rawHeaders.findIndex(function(h) {
         return normalizeStr(h).indexOf(pattern.toLowerCase()) !== -1;
@@ -75,7 +105,7 @@ function doGet(e) {
       const row = data[i];
       if (!row || row[0] === '' || row[0] === null || row[0] === undefined) continue;
 
-      const stt = row[idxSTT] || i;
+      const stt = parseVnNumber(row[idxSTT]) || i;
       const site = String(row[idxSite] || '').trim();
       const toHaTang = String(row[idxToHaTang] || '').trim();
       const maCSHT = String(row[idxMaCSHT] || '').trim();
@@ -88,17 +118,17 @@ function doGet(e) {
       const ngayDaoHan = formatDate(row[idxNgayDaoHan]);
       const banGiaoHD = String(row[idxBanGiaoHD] || '').trim();
 
-      const donGia2025 = parseFloat(row[idxDonGia2025]) || 0;
-      const donGia2026 = parseFloat(row[idxDonGia2026]) || 0;
-      const deXuatT5 = parseFloat(row[idxDeXuatT5]) || 0;
-      const deXuatT6 = parseFloat(row[idxDeXuatT6]) || 0;
-      const deXuatT7 = parseFloat(row[idxDeXuatT7]) || 0;
+      const donGia2025 = parseVnNumber(row[idxDonGia2025]);
+      const donGia2026Raw = parseVnNumber(row[idxDonGia2026]);
+      const deXuatT5 = parseVnNumber(row[idxDeXuatT5]);
+      const deXuatT6 = parseVnNumber(row[idxDeXuatT6]);
+      const deXuatT7 = parseVnNumber(row[idxDeXuatT7]);
       const thoiDiemTangGia = String(row[idxThoiDiem] || '').trim();
 
-      let chenhLechDonGia = parseFloat(row[idxChenhLech]) || 0;
+      let chenhLechDonGia = parseVnNumber(row[idxChenhLech]);
       if (!chenhLechDonGia) {
-        if (donGia2026 > donGia2025 && donGia2025 > 0) {
-          chenhLechDonGia = donGia2026 - donGia2025;
+        if (donGia2026Raw > donGia2025 && donGia2025 > 0) {
+          chenhLechDonGia = donGia2026Raw - donGia2025;
         } else if (deXuatT5 > donGia2025 && donGia2025 > 0) {
           chenhLechDonGia = deXuatT5 - donGia2025;
         } else if (deXuatT6 > donGia2025 && donGia2025 > 0) {
@@ -108,11 +138,11 @@ function doGet(e) {
         }
       }
 
-      // STRICT IS_TANG_GIA: Only true if actual increase > 0
-      const isTangGia = chenhLechDonGia > 0 || (donGia2026 > donGia2025 && donGia2025 > 0);
+      const donGia2026 = donGia2026Raw > 0 ? donGia2026Raw : (donGia2025 + chenhLechDonGia);
+      const isTangGia = chenhLechDonGia > 0;
 
-      const tong2025DaTra = parseFloat(row[idxTong2025DaTra]) || 0;
-      const no2025Ton = parseFloat(row[idxNo2025Ton]) || 0;
+      const tong2025DaTra = parseVnNumber(row[idxTong2025DaTra]);
+      const no2025Ton = parseVnNumber(row[idxNo2025Ton]);
 
       const nguoiThuHuong = String(row[idxNguoiThuHuong] || '').trim();
       const soTaiKhoan = String(row[idxSoTaiKhoan] || '').trim();
@@ -122,22 +152,26 @@ function doGet(e) {
       for (let m = 1; m <= 12; m++) {
         const mPattern = 't' + (m < 10 ? '0' + m : m) + '/2025';
         const mIdx = findColIdx(mPattern);
-        payments2025['T' + m] = mIdx !== -1 ? (parseFloat(row[mIdx]) || 0) : 0;
+        payments2025['T' + m] = mIdx !== -1 ? parseVnNumber(row[mIdx]) : 0;
       }
 
       const payments2026 = {};
+      let monthlyPaid2026Sum = 0;
       for (let m = 1; m <= 12; m++) {
         const mPattern = 't' + (m < 10 ? '0' + m : m) + '/2026';
         const mIdx = findColIdx(mPattern);
-        payments2026['T' + m] = mIdx !== -1 ? (parseFloat(row[mIdx]) || 0) : 0;
+        const pVal = mIdx !== -1 ? parseVnNumber(row[mIdx]) : 0;
+        payments2026['T' + m] = pVal;
+        monthlyPaid2026Sum += pVal;
       }
 
-      const tongChiTiet2025 = parseFloat(row[idxTongChiTiet2025]) || 0;
-      const tongChiTiet2026 = parseFloat(row[idxTongChiTiet2026]) || 0;
-      const soThangCoTT = parseInt(row[idxSoThangCoTT]) || 0;
+      const tongChiTiet2025 = parseVnNumber(row[idxTongChiTiet2025]);
+      const tongChiTiet2026 = parseVnNumber(row[idxTongChiTiet2026]);
+      const soThangCoTT = parseVnNumber(row[idxSoThangCoTT]);
       const tinhTrangPhapLy = String(row[idxPhapLy] || '').trim();
       const ngayThanhToan = formatDate(row[idxNgayThanhToan]);
-      const daThanhToan2026Den313 = parseFloat(row[idxDaThanhToan2026]) || 0;
+      const daThanhToan2026Den313Raw = parseVnNumber(row[idxDaThanhToan2026]);
+      const daThanhToan2026Den313 = daThanhToan2026Den313Raw > 0 ? daThanhToan2026Den313Raw : monthlyPaid2026Sum;
       const ghiChu = String(row[idxGhiChu] || '').trim();
 
       const isDaThanhToan = daThanhToan2026Den313 > 0 || (no2025Ton === 0 && tong2025DaTra > 0);
@@ -182,16 +216,17 @@ function doGet(e) {
       });
     }
 
-    // Apply URL parameters filtering
     let filtered = records;
-    if (params.toHaTang) filtered = filtered.filter(r => r.toHaTang === params.toHaTang);
-    if (params.site) filtered = filtered.filter(r => r.site === params.site);
-    if (params.chiTangGia === 'true') filtered = filtered.filter(r => r.isTangGia);
-    if (params.ttStatus === 'paid') filtered = filtered.filter(r => r.isDaThanhToan);
-    if (params.ttStatus === 'unpaid') filtered = filtered.filter(r => !r.isDaThanhToan || r.no2025Ton > 0);
+    if (params.toHaTang) filtered = filtered.filter(function(r) { return r.toHaTang === params.toHaTang; });
+    if (params.site) filtered = filtered.filter(function(r) { return r.site === params.site; });
+    if (params.chiTangGia === 'true') filtered = filtered.filter(function(r) { return r.isTangGia; });
+    if (params.ttStatus === 'paid') filtered = filtered.filter(function(r) { return r.isDaThanhToan; });
+    if (params.ttStatus === 'unpaid') filtered = filtered.filter(function(r) { return !r.isDaThanhToan || r.no2025Ton > 0; });
     if (params.search) {
-      const q = params.search.toLowerCase();
-      filtered = filtered.filter(r => r.maCSHT.toLowerCase().indexOf(q) !== -1 || r.tenCSHT.toLowerCase().indexOf(q) !== -1 || r.chuHopDong.toLowerCase().indexOf(q) !== -1);
+      var q = params.search.toLowerCase();
+      filtered = filtered.filter(function(r) {
+        return r.maCSHT.toLowerCase().indexOf(q) !== -1 || r.tenCSHT.toLowerCase().indexOf(q) !== -1 || r.chuHopDong.toLowerCase().indexOf(q) !== -1;
+      });
     }
 
     return jsonResponse({
@@ -208,40 +243,40 @@ function doGet(e) {
 
 function doPost(e) {
   try {
-    let contents = {};
+    var contents = {};
     if (e && e.postData && e.postData.contents) {
       contents = JSON.parse(e.postData.contents);
     }
 
-    const ss = SpreadsheetApp.getActiveSpreadsheet();
-    const sheet = ss.getSheetByName(SHEET_NAME);
+    var ss = SpreadsheetApp.getActiveSpreadsheet();
+    var sheet = ss.getSheetByName(SHEET_NAME);
 
     if (!sheet) {
       return jsonResponse({ status: 'error', message: 'Sheet not found' });
     }
 
-    const data = sheet.getDataRange().getValues();
-    const rawHeaders = data[0];
+    var data = sheet.getDataRange().getValues();
+    var rawHeaders = data[0];
 
-    const normalizeStr = function(str) {
+    var normalizeStr = function(str) {
       return String(str || '').replace(/[\r\n]+/g, ' ').replace(/\s+/g, ' ').trim().toLowerCase();
     };
 
-    const findColIdx = function(pattern) {
+    var findColIdx = function(pattern) {
       return rawHeaders.findIndex(function(h) {
         return normalizeStr(h).indexOf(pattern.toLowerCase()) !== -1;
       });
     };
 
-    const maCSHT = contents.maCSHT;
-    const rowIndex = contents.rowIndex;
-    const idxMaCSHT = findColIdx('mã csht');
+    var maCSHT = contents.maCSHT;
+    var rowIndex = contents.rowIndex;
+    var idxMaCSHT = findColIdx('mã csht');
 
-    let targetRow = -1;
+    var targetRow = -1;
     if (rowIndex && rowIndex > 1 && rowIndex <= data.length) {
       targetRow = rowIndex;
     } else if (maCSHT && idxMaCSHT !== -1) {
-      for (let i = 1; i < data.length; i++) {
+      for (var i = 1; i < data.length; i++) {
         if (String(data[i][idxMaCSHT]).trim() === String(maCSHT).trim()) {
           targetRow = i + 1;
           break;
@@ -253,9 +288,9 @@ function doPost(e) {
       return jsonResponse({ status: 'error', message: 'Trạm không tồn tại: ' + maCSHT });
     }
 
-    const updateFieldByPattern = function(pattern, value) {
+    var updateFieldByPattern = function(pattern, value) {
       if (value !== undefined) {
-        const idx = findColIdx(pattern);
+        var idx = findColIdx(pattern);
         if (idx !== -1) {
           sheet.getRange(targetRow, idx + 1).setValue(value);
         }
@@ -301,9 +336,9 @@ function doPost(e) {
 function formatDate(val) {
   if (!val) return '';
   if (val instanceof Date) {
-    const d = val.getDate();
-    const m = val.getMonth() + 1;
-    const y = val.getFullYear();
+    var d = val.getDate();
+    var m = val.getMonth() + 1;
+    var y = val.getFullYear();
     return (d < 10 ? '0' + d : d) + '/' + (m < 10 ? '0' + m : m) + '/' + y;
   }
   return String(val);
