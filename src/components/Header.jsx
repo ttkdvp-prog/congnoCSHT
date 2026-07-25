@@ -1,7 +1,7 @@
 import React from 'react';
-import { Radio, RefreshCw, Settings, Download, Github, AlertTriangle } from 'lucide-react';
+import { Radio, RefreshCw, Settings, Download, Github, AlertTriangle, Zap, ZapOff } from 'lucide-react';
 
-export default function Header({ isLive, apiUrl, onOpenConfig, onRefresh, onExportExcel, totalCount }) {
+export default function Header({ isLive, apiUrl, onOpenConfig, onRefresh, onExportExcel, totalCount, autoSync, onToggleAutoSync }) {
   return (
     <header className="glass-panel" style={{ padding: '1rem 1.5rem', marginBottom: '1.5rem' }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '1rem' }}>
@@ -57,7 +57,28 @@ export default function Header({ isLive, apiUrl, onOpenConfig, onRefresh, onExpo
             <span>{isLive ? 'Live Sync (Đã kết nối Google Sheet)' : '⚠️ Offline Data (Bấm để kết nối Google Sheet)'}</span>
           </div>
 
-          <button className="btn btn-secondary" onClick={onRefresh} title="Làm mới dữ liệu">
+          {/* Auto-Sync Toggle Badge */}
+          {isLive && (
+            <button
+              onClick={onToggleAutoSync}
+              className="btn"
+              style={{
+                padding: '0.45rem 0.85rem',
+                fontSize: '0.8rem',
+                borderRadius: '9999px',
+                background: autoSync ? 'rgba(59, 130, 246, 0.15)' : 'rgba(107, 114, 128, 0.2)',
+                border: autoSync ? '1px solid rgba(59, 130, 246, 0.4)' : '1px solid rgba(107, 114, 128, 0.4)',
+                color: autoSync ? '#60a5fa' : '#9ca3af',
+                fontWeight: 600
+              }}
+              title="Bật/Tắt tự động lấy dữ liệu mới từ Google Sheet mỗi 15 giây"
+            >
+              {autoSync ? <Zap size={14} className="animate-pulse" style={{ color: '#60a5fa' }} /> : <ZapOff size={14} />}
+              <span>{autoSync ? 'Tự đồng bộ (15s)' : 'Tự đồng bộ: Tắt'}</span>
+            </button>
+          )}
+
+          <button className="btn btn-secondary" onClick={onRefresh} title="Làm mới dữ liệu từ Google Sheet ngay lập tức">
             <RefreshCw size={16} />
             <span>Làm mới</span>
           </button>

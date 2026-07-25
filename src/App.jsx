@@ -140,12 +140,14 @@ export default function App() {
 
   const [data, setData] = useState(() => processStationRecords(rawFallbackData));
 
+  const [autoSync, setAutoSync] = useState(true);
+
   // Load data from Google Apps Script if URL exists
-  const fetchDataFromGAS = async (url) => {
+  const fetchDataFromGAS = async (url, isSilent = false) => {
     if (!url) return;
-    setIsLoading(true);
+    if (!isSilent) setIsLoading(true);
     try {
-      const endpoint = url + (url.includes('?') ? '&' : '?') + 'action=getData';
+      const endpoint = url + (url.includes('?') ? '&' : '?') + 'action=getData&_t=' + Date.now();
       const res = await fetch(endpoint);
       const result = await res.json();
       if (result && result.status === 'success' && Array.isArray(result.data) && result.data.length > 0) {
@@ -158,7 +160,7 @@ export default function App() {
       console.warn('Cannot fetch from Apps Script API, using fallback local data.', err);
       setIsLive(false);
     } finally {
-      setIsLoading(false);
+      if (!isSilent) setIsLoading(false);
     }
   };
 
@@ -167,6 +169,15 @@ export default function App() {
       fetchDataFromGAS(apiUrl);
     }
   }, [apiUrl]);
+
+  // Auto polling interval every 15s to automatically sync changes made directly on Google Sheets
+  useEffect(() => {
+    if (!apiUrl || !autoSync) return;
+    const timer = setInterval(() => {
+      fetchDataFromGAS(apiUrl, true);
+    }, 15000);
+    return () => clearInterval(timer);
+  }, [apiUrl, autoSync]);
 
   const handleFilterChange = (key, value) => {
     setFilters(prev => ({ ...prev, [key]: value }));
@@ -414,9 +425,11 @@ export default function App() {
         isLive={isLive}
         apiUrl={apiUrl}
         onOpenConfig={() => setIsConfigOpen(true)}
-        onRefresh={() => apiUrl ? fetchDataFromGAS(apiUrl) : setData(rawFallbackData)}
+        onRefresh={() => apiUrl ? fetchDataFromGAS(apiUrl) : setData(processStationRecords(rawFallbackData))}
         onExportExcel={handleExportExcel}
         totalCount={data.length}
+        autoSync={autoSync}
+        onToggleAutoSync={() => setAutoSync(!autoSync)}
       />
 
       {/* Main Navigation Tabs */}
