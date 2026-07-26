@@ -218,6 +218,40 @@ export default function App() {
     return () => clearInterval(timer);
   }, [apiUrl, autoSync, syncInterval]);
 
+  // Auto-detect when developer deploys new code updates to Vercel and auto-refresh for all active users
+  useEffect(() => {
+    let initialTag = null;
+
+    const checkVercelDeployment = async () => {
+      try {
+        const res = await fetch('/index.html?_chk=' + Date.now(), { cache: 'no-store' });
+        const etag = res.headers.get('etag') || res.headers.get('last-modified');
+        const text = await res.text();
+        const currentTag = etag || (text.length + '_' + (text.slice(0, 100)));
+
+        if (initialTag && initialTag !== currentTag) {
+          console.log('⚡ New version deployment detected on Vercel!');
+          setToastMessage({
+            type: 'success',
+            text: '🚀 Đã có bản cập nhật mới! Đang tự động làm mới giao diện...'
+          });
+          setTimeout(() => {
+            window.location.reload(true);
+          }, 1500);
+        } else {
+          initialTag = currentTag;
+        }
+      } catch (e) {
+        // ignore fetch error
+      }
+    };
+
+    const vercelTimer = setInterval(checkVercelDeployment, 15000);
+    checkVercelDeployment();
+
+    return () => clearInterval(vercelTimer);
+  }, []);
+
   const handleFilterChange = (key, value) => {
     setFilters(prev => ({ ...prev, [key]: value }));
   };
