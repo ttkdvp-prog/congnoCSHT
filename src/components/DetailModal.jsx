@@ -48,6 +48,7 @@ export default function DetailModal({ station, isOpen, onClose }) {
               <div><strong style={{ color: 'var(--text-secondary)' }}>Tên CSHT:</strong> {station.tenCSHT}</div>
               <div><strong style={{ color: 'var(--text-secondary)' }}>Mã CSHT RIMS:</strong> {station.maCSHTRims || '-'}</div>
               <div><strong style={{ color: 'var(--text-secondary)' }}>Chủ Hợp Đồng:</strong> {station.chuHopDong}</div>
+              <div><strong style={{ color: 'var(--text-secondary)' }}>Địa Chỉ Đối Tác:</strong> {station.diaChiDoiTac || 'Chưa cập nhật'}</div>
               <div><strong style={{ color: 'var(--text-secondary)' }}>Số Hợp Đồng:</strong> {station.soHopDong || '-'}</div>
               <div><strong style={{ color: 'var(--text-secondary)' }}>Ngày Ký:</strong> {station.ngayKy || '-'}</div>
               <div><strong style={{ color: 'var(--text-secondary)' }}>Ngày Tính Tiền:</strong> {station.ngayTinhTien || '-'}</div>

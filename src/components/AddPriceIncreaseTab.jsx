@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { Search, PlusCircle, Save, Flame, Building, MapPin, DollarSign, Calendar, Edit3, X, AlertCircle, Sparkles, List, Trash2, FileText } from 'lucide-react';
+import { Search, PlusCircle, Save, Flame, Building, MapPin, DollarSign, Calendar, Edit3, X, AlertCircle, Sparkles, List, Trash2, FileText, User } from 'lucide-react';
 
 export default function AddPriceIncreaseTab({ data, onSaveStation, isSaving }) {
   const [searchTerm, setSearchTerm] = useState('');
@@ -11,6 +11,7 @@ export default function AddPriceIncreaseTab({ data, onSaveStation, isSaving }) {
   const [thoiDiem, setThoiDiem] = useState('');
   const [lyDo, setLyDo] = useState('');
   const [baoCaoVTT, setBaoCaoVTT] = useState('Chưa làm văn bản báo cáo');
+  const [diaChiDoiTac, setDiaChiDoiTac] = useState('');
   const [tableSearch, setTableSearch] = useState('');
 
   // Session-level updated stations (unique key: rowIndex or maCSHT_rowIndex)
@@ -61,7 +62,7 @@ export default function AddPriceIncreaseTab({ data, onSaveStation, isSaving }) {
     return st.rowIndex ? `row_${st.rowIndex}` : `ma_${st.maCSHT}`;
   };
 
-  // Filter stations based on search term
+  // Filter stations based on search term (searches maCSHT, tenCSHT, site, chuHopDong, diaChiDoiTac)
   const searchResults = useMemo(() => {
     if (!searchTerm.trim()) return [];
     const q = searchTerm.toLowerCase().trim();
@@ -69,7 +70,8 @@ export default function AddPriceIncreaseTab({ data, onSaveStation, isSaving }) {
       st.maCSHT?.toLowerCase().includes(q) ||
       st.tenCSHT?.toLowerCase().includes(q) ||
       st.site?.toLowerCase().includes(q) ||
-      st.chuHopDong?.toLowerCase().includes(q)
+      st.chuHopDong?.toLowerCase().includes(q) ||
+      st.diaChiDoiTac?.toLowerCase().includes(q)
     ).slice(0, 15);
   }, [data, searchTerm]);
 
@@ -86,6 +88,7 @@ export default function AddPriceIncreaseTab({ data, onSaveStation, isSaving }) {
     setThoiDiem(station.thoiDiemTangGia || '');
     setLyDo(station.ghiChu || '');
     setBaoCaoVTT(station.baoCaoVTT || 'Chưa làm văn bản báo cáo');
+    setDiaChiDoiTac(station.diaChiDoiTac || '');
   };
 
   const handleClearSelection = () => {
@@ -95,6 +98,7 @@ export default function AddPriceIncreaseTab({ data, onSaveStation, isSaving }) {
     setThoiDiem('');
     setLyDo('');
     setBaoCaoVTT('Chưa làm văn bản báo cáo');
+    setDiaChiDoiTac('');
   };
 
   // Clear Session List
@@ -127,7 +131,8 @@ export default function AddPriceIncreaseTab({ data, onSaveStation, isSaving }) {
       isTangGia: chenhLech > 0 || numDonGiaMoi > donGiaCu,
       thoiDiemTangGia: thoiDiem.trim(),
       ghiChu: lyDo.trim(),
-      baoCaoVTT: baoCaoVTT.trim() || 'Chưa làm văn bản báo cáo'
+      baoCaoVTT: baoCaoVTT.trim() || 'Chưa làm văn bản báo cáo',
+      diaChiDoiTac: diaChiDoiTac.trim()
     };
 
     // Record unique key in session list
@@ -167,6 +172,8 @@ export default function AddPriceIncreaseTab({ data, onSaveStation, isSaving }) {
       st.tenCSHT?.toLowerCase().includes(q) ||
       st.site?.toLowerCase().includes(q) ||
       st.toHaTang?.toLowerCase().includes(q) ||
+      st.chuHopDong?.toLowerCase().includes(q) ||
+      st.diaChiDoiTac?.toLowerCase().includes(q) ||
       st.baoCaoVTT?.toLowerCase().includes(q)
     );
   }, [tableViewMode, sessionList, tangGiaList, tableSearch]);
@@ -193,7 +200,7 @@ export default function AddPriceIncreaseTab({ data, onSaveStation, isSaving }) {
               NHẬP & CẬP NHẬT TRẠM TĂNG GIÁ CSHT
             </h2>
             <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
-              Tìm kiếm trạm theo Mã CSHT / Tên trạm, nhập đơn giá mới, tiến độ báo cáo VTT và thời điểm tăng giá, tự động đồng bộ sang Google Sheet.
+              Tìm kiếm trạm theo Mã CSHT / Tên trạm, nhập đơn giá mới, địa chỉ đối tác, tiến độ báo cáo VTT và thời điểm tăng giá, tự động đồng bộ sang Google Sheet.
             </p>
           </div>
         </div>
@@ -215,7 +222,7 @@ export default function AddPriceIncreaseTab({ data, onSaveStation, isSaving }) {
               <input
                 type="text"
                 className="input-field"
-                placeholder="Gõ Mã CSHT hoặc Tên trạm..."
+                placeholder="Gõ Mã CSHT, Tên trạm hoặc Địa chỉ đối tác..."
                 value={searchTerm}
                 onChange={(e) => {
                   setSearchTerm(e.target.value);
@@ -282,7 +289,7 @@ export default function AddPriceIncreaseTab({ data, onSaveStation, isSaving }) {
                         {st.maCSHT} <span style={{ color: 'var(--text-main)', fontWeight: 500 }}>- {st.tenCSHT}</span>
                       </div>
                       <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
-                        Site: {st.site} | Tổ: {st.toHaTang} | Chủ HĐ: {st.chuHopDong}
+                        Site: {st.site} | Tổ: {st.toHaTang} | Chủ HĐ: {st.chuHopDong} {st.diaChiDoiTac ? `| ĐC: ${st.diaChiDoiTac}` : ''}
                       </div>
                     </div>
                     {st.isTangGia && (
@@ -326,8 +333,13 @@ export default function AddPriceIncreaseTab({ data, onSaveStation, isSaving }) {
               </div>
 
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
-                <MapPin size={14} style={{ color: '#ec4899' }} />
-                <span>Chủ HĐ / Đ.Chỉ: <strong>{selectedStation.diaChiDoiTac || selectedStation.chuHopDong || '---'}</strong></span>
+                <User size={14} style={{ color: '#ec4899' }} />
+                <span>Chủ HĐ: <strong>{selectedStation.chuHopDong || '---'}</strong></span>
+              </div>
+
+              <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.5rem', fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
+                <MapPin size={14} style={{ color: '#f43f5e', marginTop: '2px', flexShrink: 0 }} />
+                <span>Địa chỉ đối tác: <strong style={{ color: selectedStation.diaChiDoiTac ? '#34d399' : 'var(--text-muted)' }}>{selectedStation.diaChiDoiTac || 'Chưa có thông tin địa chỉ'}</strong></span>
               </div>
 
               <div style={{
@@ -362,7 +374,7 @@ export default function AddPriceIncreaseTab({ data, onSaveStation, isSaving }) {
         <div className="glass-panel" style={{ padding: '1.25rem' }}>
           <h3 style={{ fontSize: '1rem', fontWeight: 700, color: '#fbbf24', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
             <Edit3 size={18} />
-            2. Thông Tin Đề Xuất Tăng Giá & Báo Cáo VTT
+            2. Thông Tin Đề Xuất Tăng Giá & Địa Chỉ Đối Tác
           </h3>
 
           <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
@@ -422,7 +434,34 @@ export default function AddPriceIncreaseTab({ data, onSaveStation, isSaving }) {
               </div>
             )}
 
-            {/* Input Báo cáo VTT (Tiến độ báo cáo Viễn Thông Tỉnh) */}
+            {/* Input Địa chỉ đối tác */}
+            <div>
+              <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '0.35rem' }}>
+                Địa chỉ đối tác:
+              </label>
+              <div style={{ position: 'relative' }}>
+                <input
+                  type="text"
+                  className="input-field"
+                  placeholder="Nhập địa chỉ nhà / khu vực của đối tác..."
+                  value={diaChiDoiTac}
+                  onChange={(e) => setDiaChiDoiTac(e.target.value)}
+                  disabled={!selectedStation}
+                  style={{
+                    width: '100%',
+                    padding: '0.65rem 1rem 0.65rem 2.2rem',
+                    fontSize: '0.85rem',
+                    borderRadius: 'var(--radius-md)',
+                    background: 'var(--bg-primary)',
+                    border: '1px solid var(--border-color)',
+                    color: 'var(--text-main)'
+                  }}
+                />
+                <MapPin size={16} style={{ position: 'absolute', left: '0.75rem', top: '50%', transform: 'translateY(-50%)', color: '#f43f5e' }} />
+              </div>
+            </div>
+
+            {/* Input Báo cáo VTT */}
             <div>
               <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '0.35rem' }}>
                 Tiến độ Báo cáo VTT:
@@ -595,7 +634,7 @@ export default function AddPriceIncreaseTab({ data, onSaveStation, isSaving }) {
               </h3>
             </div>
             <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
-              Chế độ xem phân loại giúp theo dõi chính xác tiến độ Báo cáo VTT và các trạm vừa cập nhật.
+              Chế độ xem phân loại giúp theo dõi chính xác địa chỉ đối tác, tiến độ Báo cáo VTT và các trạm vừa cập nhật.
             </p>
           </div>
 
@@ -701,7 +740,7 @@ export default function AddPriceIncreaseTab({ data, onSaveStation, isSaving }) {
               <tr style={{ background: 'rgba(15, 23, 42, 0.95)', borderBottom: '2px solid var(--border-color)', color: 'var(--text-secondary)' }}>
                 <th style={{ padding: '0.75rem 0.5rem', textAlign: 'center' }}>STT</th>
                 <th style={{ padding: '0.75rem' }}>Mã CSHT</th>
-                <th style={{ padding: '0.75rem' }}>Tên CSHT</th>
+                <th style={{ padding: '0.75rem' }}>Tên CSHT & Địa Chỉ Đối Tác</th>
                 <th style={{ padding: '0.75rem' }}>Site</th>
                 <th style={{ padding: '0.75rem' }}>Tổ Hạ Tầng</th>
                 <th style={{ padding: '0.75rem', textAlign: 'right' }}>Đơn Giá 2025 (Cũ)</th>
@@ -747,7 +786,15 @@ export default function AddPriceIncreaseTab({ data, onSaveStation, isSaving }) {
                           </span>
                         )}
                       </td>
-                      <td style={{ padding: '0.6rem', fontWeight: 600, color: 'var(--text-main)' }}>{st.tenCSHT}</td>
+                      <td style={{ padding: '0.6rem', color: 'var(--text-main)' }}>
+                        <div style={{ fontWeight: 600 }}>{st.tenCSHT}</div>
+                        <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
+                          Chủ HĐ: <strong>{st.chuHopDong || '---'}</strong>
+                          {st.diaChiDoiTac ? (
+                            <span style={{ color: '#34d399', marginLeft: '0.3rem' }}> • 📍 {st.diaChiDoiTac}</span>
+                          ) : null}
+                        </div>
+                      </td>
                       <td style={{ padding: '0.6rem', color: 'var(--text-secondary)' }}>{st.site}</td>
                       <td style={{ padding: '0.6rem', color: 'var(--text-secondary)' }}>{st.toHaTang}</td>
                       <td style={{ padding: '0.6rem', textAlign: 'right', color: 'var(--text-muted)' }}>{formatVND(donGiaCu)}</td>

@@ -42,6 +42,7 @@ export default function EditStationModal({ station, isOpen, onClose, onSave, isS
         maCSHT: station.maCSHT || '',
         tenCSHT: station.tenCSHT || '',
         chuHopDong: station.chuHopDong || '',
+        diaChiDoiTac: station.diaChiDoiTac || '',
         soHopDong: station.soHopDong || '',
         tinhTrangPhapLy: station.tinhTrangPhapLy || '',
 
@@ -247,6 +248,19 @@ export default function EditStationModal({ station, isOpen, onClose, onSave, isS
                   className="input-control"
                   value={formData.chuHopDong}
                   onChange={(e) => setFormData(p => ({ ...p, chuHopDong: e.target.value }))}
+                />
+              </div>
+
+              <div>
+                <label style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-secondary)', display: 'block', marginBottom: '0.35rem' }}>
+                  Địa Chỉ Đối Tác:
+                </label>
+                <input
+                  type="text"
+                  className="input-control"
+                  value={formData.diaChiDoiTac}
+                  onChange={(e) => setFormData(p => ({ ...p, diaChiDoiTac: e.target.value }))}
+                  placeholder="Nhập địa chỉ của đối tác..."
                 />
               </div>
 
