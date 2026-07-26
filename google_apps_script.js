@@ -314,15 +314,16 @@ function doPost(e) {
     var idxMaCSHT = findColIdx('mã csht');
 
     var targetRow = -1;
-    if (rowIndex && rowIndex > 1 && rowIndex <= data.length) {
-      targetRow = rowIndex;
-    } else if (maCSHT && idxMaCSHT !== -1) {
+    if (maCSHT && idxMaCSHT !== -1) {
       for (var i = 1; i < data.length; i++) {
-        if (String(data[i][idxMaCSHT]).trim() === String(maCSHT).trim()) {
+        if (String(data[i][idxMaCSHT]).trim().toLowerCase() === String(maCSHT).trim().toLowerCase()) {
           targetRow = i + 1;
           break;
         }
       }
+    }
+    if (targetRow === -1 && rowIndex && rowIndex > 1 && rowIndex <= data.length) {
+      targetRow = rowIndex;
     }
 
     if (targetRow === -1) {
@@ -330,12 +331,16 @@ function doPost(e) {
     }
 
     var updateFieldByPattern = function(patterns, value) {
-      if (value !== undefined) {
+      if (value !== undefined && value !== null) {
         var patternList = Array.isArray(patterns) ? patterns : [patterns];
         for (var p = 0; p < patternList.length; p++) {
           var idx = findColIdx(patternList[p]);
           if (idx !== -1) {
-            sheet.getRange(targetRow, idx + 1).setValue(value);
+            var strVal = String(value);
+            if (strVal.length > 49000) {
+              strVal = strVal.substring(0, 49000);
+            }
+            sheet.getRange(targetRow, idx + 1).setValue(strVal);
             return;
           }
         }
