@@ -1,5 +1,5 @@
-import React, { useState, useMemo } from 'react';
-import { Search, PlusCircle, Save, CheckCircle, TrendingUp, Flame, FileSpreadsheet, Building, MapPin, DollarSign, Calendar, Edit3, X, AlertCircle } from 'lucide-react';
+import React, { useState, useMemo, useEffect } from 'react';
+import { Search, PlusCircle, Save, Flame, Building, MapPin, DollarSign, Calendar, Edit3, X, AlertCircle, Sparkles, Filter, List } from 'lucide-react';
 
 export default function AddPriceIncreaseTab({ data, onSaveStation, isSaving }) {
   const [searchTerm, setSearchTerm] = useState('');
@@ -11,6 +11,47 @@ export default function AddPriceIncreaseTab({ data, onSaveStation, isSaving }) {
   const [thoiDiem, setThoiDiem] = useState('01/07/2026');
   const [lyDo, setLyDo] = useState('');
   const [tableSearch, setTableSearch] = useState('');
+
+  // Session-level updated stations (trạm vừa nhập từ hôm nay)
+  const [sessionUpdatedCodes, setSessionUpdatedCodes] = useState(() => {
+    try {
+      const saved = localStorage.getItem('csht_session_updated_codes');
+      return saved ? JSON.parse(saved) : [];
+    } catch (e) {
+      return [];
+    }
+  });
+
+  // Table View Filter Mode: 'session' (trạm mới nhập hôm nay) | 'all' (tất cả trạm tăng giá)
+  const [tableViewMode, setTableViewMode] = useState(() => {
+    try {
+      const saved = localStorage.getItem('csht_session_updated_codes');
+      const parsed = saved ? JSON.parse(saved) : [];
+      return parsed.length > 0 ? 'session' : 'all';
+    } catch (e) {
+      return 'all';
+    }
+  });
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('csht_session_updated_codes', JSON.stringify(sessionUpdatedCodes));
+    } catch (e) {}
+  }, [sessionUpdatedCodes]);
+
+  // Helper functions for formatting numbers with dots (hàng nghìn)
+  const formatNumberWithDots = (val) => {
+    if (val === null || val === undefined || val === '') return '';
+    const digitsOnly = String(val).replace(/\D/g, '');
+    if (!digitsOnly) return '';
+    return Number(digitsOnly).toLocaleString('de-DE'); // e.g. 2.240.000
+  };
+
+  const parseNumberFromDots = (val) => {
+    if (!val) return 0;
+    const cleanStr = String(val).replace(/\./g, '').replace(/,/g, '');
+    return parseFloat(cleanStr) || 0;
+  };
 
   // Filter stations based on search term
   const searchResults = useMemo(() => {
@@ -32,7 +73,7 @@ export default function AddPriceIncreaseTab({ data, onSaveStation, isSaving }) {
 
     // Pre-fill form if station already has price increase
     const initialMoi = station.deXuatT7 > 0 ? station.deXuatT7 : (station.donGia2026 > 0 ? station.donGia2026 : station.donGia2025);
-    setDonGiaMoi(initialMoi ? String(initialMoi) : '');
+    setDonGiaMoi(initialMoi ? formatNumberWithDots(initialMoi) : '');
     setThoiDiem(station.thoiDiemTangGia || '01/07/2026');
     setLyDo(station.ghiChu || '');
   };
@@ -47,7 +88,7 @@ export default function AddPriceIncreaseTab({ data, onSaveStation, isSaving }) {
 
   // Calculations for current selected station
   const donGiaCu = selectedStation ? (selectedStation.donGia2025 || 0) : 0;
-  const numDonGiaMoi = parseFloat(donGiaMoi) || 0;
+  const numDonGiaMoi = parseNumberFromDots(donGiaMoi);
   const chenhLech = Math.max(0, numDonGiaMoi - donGiaCu);
   const percentTang = donGiaCu > 0 ? ((chenhLech / donGiaCu) * 100).toFixed(1) : 0;
 
@@ -66,28 +107,45 @@ export default function AddPriceIncreaseTab({ data, onSaveStation, isSaving }) {
       ghiChu: lyDo.trim()
     };
 
+    // Record this station code as newly updated in the current session
+    if (selectedStation.maCSHT) {
+      setSessionUpdatedCodes(prev => {
+        if (!prev.includes(selectedStation.maCSHT)) {
+          return [...prev, selectedStation.maCSHT];
+        }
+        return prev;
+      });
+      setTableViewMode('session'); // Auto-switch view to session list
+    }
+
     onSaveStation(updatedStation);
   };
 
-  // Filtered List of all stations with Price Increase for Summary Table
+  // Filtered List of all stations with Price Increase
   const tangGiaList = useMemo(() => {
     return data.filter(st => st.isTangGia || st.deXuatT7 > 0 || st.chenhLechDonGia > 0);
   }, [data]);
 
-  const filteredTangGiaList = useMemo(() => {
-    if (!tableSearch.trim()) return tangGiaList;
+  // Session updated stations list
+  const sessionList = useMemo(() => {
+    return data.filter(st => sessionUpdatedCodes.includes(st.maCSHT));
+  }, [data, sessionUpdatedCodes]);
+
+  // Active list based on view mode ('session' vs 'all')
+  const activeDisplayList = useMemo(() => {
+    const list = tableViewMode === 'session' ? sessionList : tangGiaList;
+    if (!tableSearch.trim()) return list;
     const q = tableSearch.toLowerCase().trim();
-    return tangGiaList.filter(st =>
+    return list.filter(st =>
       st.maCSHT?.toLowerCase().includes(q) ||
       st.tenCSHT?.toLowerCase().includes(q) ||
       st.site?.toLowerCase().includes(q) ||
       st.toHaTang?.toLowerCase().includes(q)
     );
-  }, [tangGiaList, tableSearch]);
+  }, [tableViewMode, sessionList, tangGiaList, tableSearch]);
 
   // Statistics
-  const totalTangGiaCount = tangGiaList.length;
-  const totalChenhLechMonth = tangGiaList.reduce((sum, item) => sum + (item.chenhLechDonGia || 0), 0);
+  const totalChenhLechMonth = activeDisplayList.reduce((sum, item) => sum + (item.chenhLechDonGia || 0), 0);
   const totalChenhLechYear = totalChenhLechMonth * 12;
 
   const formatVND = (val) => {
@@ -109,7 +167,7 @@ export default function AddPriceIncreaseTab({ data, onSaveStation, isSaving }) {
               NHẬP & CẬP NHẬT TRẠM TĂNG GIÁ CSHT
             </h2>
             <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
-              Tìm kiếm trạm theo Mã CSHT / Tên trạm, nhập thông tin tăng giá (tháng 7 và thời điểm tăng giá), hệ thống sẽ tự động đồng bộ sang Google Sheet và lên báo cáo toàn bộ Dashboard.
+              Tìm kiếm trạm theo Mã CSHT / Tên trạm, nhập thông tin tăng giá (thời điểm và đơn giá mới), hệ thống sẽ tự động đồng bộ sang Google Sheet và lên báo cáo toàn bộ Dashboard.
             </p>
           </div>
         </div>
@@ -283,18 +341,18 @@ export default function AddPriceIncreaseTab({ data, onSaveStation, isSaving }) {
 
           <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
             
-            {/* Input Đơn giá mới (Đề xuất tăng giá tháng 7) */}
+            {/* Input Đơn giá mới (Đề xuất tăng giá) with Thousand Separator formatting */}
             <div>
               <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '0.35rem' }}>
-                Đơn giá mới (Đề xuất tăng giá tháng 7) [VND/tháng]:
+                Đơn giá mới (Đề xuất tăng giá) [VND/tháng]:
               </label>
               <div style={{ position: 'relative' }}>
                 <input
-                  type="number"
+                  type="text"
                   className="input-field"
-                  placeholder="Ví dụ: 2500000"
+                  placeholder="Ví dụ: 2.240.000"
                   value={donGiaMoi}
-                  onChange={(e) => setDonGiaMoi(e.target.value)}
+                  onChange={(e) => setDonGiaMoi(formatNumberWithDots(e.target.value))}
                   disabled={!selectedStation}
                   required
                   style={{
@@ -421,37 +479,80 @@ export default function AddPriceIncreaseTab({ data, onSaveStation, isSaving }) {
       {/* SUMMARY TABLE SECTION */}
       <div className="glass-panel" style={{ padding: '1.25rem' }}>
         
-        {/* Table Header & KPI Summary Bar */}
+        {/* Table View Switcher & Header */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '1rem', marginBottom: '1.25rem' }}>
           <div>
-            <h3 style={{ fontSize: '1.1rem', fontWeight: 700, color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.25rem' }}>
               <Flame size={20} style={{ color: '#f59e0b' }} />
-              Danh Sách Trạm Đã Cập Nhật Tăng Giá ({tangGiaList.length} Trạm)
-            </h3>
+              <h3 style={{ fontSize: '1.1rem', fontWeight: 700, color: 'var(--text-main)' }}>
+                {tableViewMode === 'session' ? 'Danh Sách Trạm Vừa Nhập Mới (Hôm Nay)' : 'Danh Sách Tất Cả Trạm Tăng Giá'}
+              </h3>
+            </div>
             <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
-              Số liệu tổng hợp tự động đồng bộ liên kết sang sheet Theo dõi đầy đủ và các tab báo cáo khác.
+              Chế độ xem phân loại giúp tránh rối và lẫn lộn với 137 trạm đã có trước đây.
             </p>
           </div>
 
-          <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', flexWrap: 'wrap' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
+            {/* View Mode Buttons */}
+            <div style={{ display: 'flex', background: 'var(--bg-primary)', padding: '0.25rem', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-color)' }}>
+              <button
+                type="button"
+                onClick={() => setTableViewMode('session')}
+                style={{
+                  padding: '0.4rem 0.85rem',
+                  fontSize: '0.8rem',
+                  fontWeight: tableViewMode === 'session' ? 700 : 500,
+                  borderRadius: 'var(--radius-sm)',
+                  border: 'none',
+                  background: tableViewMode === 'session' ? '#3b82f6' : 'transparent',
+                  color: tableViewMode === 'session' ? '#fff' : 'var(--text-secondary)',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.4rem'
+                }}
+              >
+                <Sparkles size={14} />
+                <span>Trạm Mới Nhập ({sessionList.length})</span>
+              </button>
+              
+              <button
+                type="button"
+                onClick={() => setTableViewMode('all')}
+                style={{
+                  padding: '0.4rem 0.85rem',
+                  fontSize: '0.8rem',
+                  fontWeight: tableViewMode === 'all' ? 700 : 500,
+                  borderRadius: 'var(--radius-sm)',
+                  border: 'none',
+                  background: tableViewMode === 'all' ? '#f59e0b' : 'transparent',
+                  color: tableViewMode === 'all' ? '#fff' : 'var(--text-secondary)',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.4rem'
+                }}
+              >
+                <List size={14} />
+                <span>Tất Cả Trạm ({tangGiaList.length})</span>
+              </button>
+            </div>
+
+            {/* KPI Totals */}
             <div style={{ background: 'rgba(245, 158, 11, 0.15)', border: '1px solid rgba(245, 158, 11, 0.3)', padding: '0.4rem 0.85rem', borderRadius: 'var(--radius-md)', textAlign: 'right' }}>
               <span style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', display: 'block' }}>TỔNG CHÊNH LỆCH TĂNG/THÁNG:</span>
               <strong style={{ color: '#fbbf24', fontSize: '0.95rem' }}>+{formatVND(totalChenhLechMonth)}</strong>
-            </div>
-
-            <div style={{ background: 'rgba(16, 185, 129, 0.15)', border: '1px solid rgba(16, 185, 129, 0.3)', padding: '0.4rem 0.85rem', borderRadius: 'var(--radius-md)', textAlign: 'right' }}>
-              <span style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', display: 'block' }}>TỔNG CHÊNH LỆCH TĂNG/NĂM:</span>
-              <strong style={{ color: '#34d399', fontSize: '0.95rem' }}>+{formatVND(totalChenhLechYear)}</strong>
             </div>
           </div>
         </div>
 
         {/* Filter Input for Summary Table */}
-        <div style={{ marginBottom: '1rem' }}>
+        <div style={{ marginBottom: '1rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '1rem', flexWrap: 'wrap' }}>
           <input
             type="text"
             className="input-field"
-            placeholder="Lọc danh sách trạm tăng giá bên dưới..."
+            placeholder={tableViewMode === 'session' ? "Lọc danh sách trạm vừa nhập mới..." : "Lọc tất cả danh sách trạm tăng giá..."}
             value={tableSearch}
             onChange={(e) => setTableSearch(e.target.value)}
             style={{
@@ -465,6 +566,12 @@ export default function AddPriceIncreaseTab({ data, onSaveStation, isSaving }) {
               color: 'var(--text-main)'
             }}
           />
+
+          {sessionList.length > 0 && (
+            <span className="badge" style={{ background: 'rgba(16, 185, 129, 0.15)', color: '#34d399', border: '1px solid rgba(16, 185, 129, 0.3)', padding: '0.35rem 0.75rem', fontSize: '0.8rem' }}>
+              ✨ Đã nhập thành công <strong>{sessionList.length} trạm</strong> mới trong phiên làm việc này.
+            </span>
+          )}
         </div>
 
         {/* Summary Table */}
@@ -478,7 +585,7 @@ export default function AddPriceIncreaseTab({ data, onSaveStation, isSaving }) {
                 <th style={{ padding: '0.75rem' }}>Site</th>
                 <th style={{ padding: '0.75rem' }}>Tổ Hạ Tầng</th>
                 <th style={{ padding: '0.75rem', textAlign: 'right' }}>Đơn Giá 2025 (Cũ)</th>
-                <th style={{ padding: '0.75rem', textAlign: 'right' }}>Giá Mới (Tháng 7)</th>
+                <th style={{ padding: '0.75rem', textAlign: 'right' }}>Giá Mới (Tăng Giá)</th>
                 <th style={{ padding: '0.75rem', textAlign: 'right' }}>Tăng / Tháng</th>
                 <th style={{ padding: '0.75rem', textAlign: 'center' }}>Thời Điểm Tăng</th>
                 <th style={{ padding: '0.75rem' }}>Lý Do / Ghi Chú</th>
@@ -486,21 +593,37 @@ export default function AddPriceIncreaseTab({ data, onSaveStation, isSaving }) {
               </tr>
             </thead>
             <tbody>
-              {filteredTangGiaList.length > 0 ? (
-                filteredTangGiaList.map((st, idx) => {
+              {activeDisplayList.length > 0 ? (
+                activeDisplayList.map((st, idx) => {
                   const donGiaCu = st.donGia2025 || 0;
                   const donGiaMoi = st.deXuatT7 > 0 ? st.deXuatT7 : (st.donGia2026 || donGiaCu);
                   const diff = st.chenhLechDonGia || Math.max(0, donGiaMoi - donGiaCu);
+                  const isNewlyAdded = sessionUpdatedCodes.includes(st.maCSHT);
+                  
+                  // STT labeling logic: if in session view, show Trạm #138, #139... (after 137 historical stations)
+                  const displayStt = tableViewMode === 'session' ? (137 + idx + 1) : (idx + 1);
 
                   return (
                     <tr
                       key={st.maCSHT || idx}
-                      style={{ borderBottom: '1px solid var(--border-color)' }}
-                      onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.03)'}
-                      onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
+                      style={{
+                        borderBottom: '1px solid var(--border-color)',
+                        background: isNewlyAdded ? 'rgba(59, 130, 246, 0.06)' : 'transparent'
+                      }}
+                      onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.04)'}
+                      onMouseLeave={(e) => e.currentTarget.style.background = isNewlyAdded ? 'rgba(59, 130, 246, 0.06)' : 'transparent'}
                     >
-                      <td style={{ padding: '0.6rem 0.5rem', textAlign: 'center', color: 'var(--text-muted)' }}>{idx + 1}</td>
-                      <td style={{ padding: '0.6rem', fontWeight: 700, color: '#60a5fa' }}>{st.maCSHT}</td>
+                      <td style={{ padding: '0.6rem 0.5rem', textAlign: 'center', fontWeight: 700, color: isNewlyAdded ? '#60a5fa' : 'var(--text-muted)' }}>
+                        {displayStt}
+                      </td>
+                      <td style={{ padding: '0.6rem', fontWeight: 700, color: '#60a5fa' }}>
+                        {st.maCSHT}
+                        {isNewlyAdded && (
+                          <span style={{ marginLeft: '0.4rem', fontSize: '0.65rem', background: '#3b82f6', color: '#fff', padding: '0.1rem 0.4rem', borderRadius: '4px' }}>
+                            Mới
+                          </span>
+                        )}
+                      </td>
                       <td style={{ padding: '0.6rem', fontWeight: 600, color: 'var(--text-main)' }}>{st.tenCSHT}</td>
                       <td style={{ padding: '0.6rem', color: 'var(--text-secondary)' }}>{st.site}</td>
                       <td style={{ padding: '0.6rem', color: 'var(--text-secondary)' }}>{st.toHaTang}</td>
@@ -531,8 +654,10 @@ export default function AddPriceIncreaseTab({ data, onSaveStation, isSaving }) {
                 })
               ) : (
                 <tr>
-                  <td colSpan="11" style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-muted)' }}>
-                    Chưa có trạm nào cập nhật tăng giá.
+                  <td colSpan="11" style={{ textAlign: 'center', padding: '2.5rem', color: 'var(--text-muted)' }}>
+                    {tableViewMode === 'session' 
+                      ? 'Chưa có trạm nào được nhập mới trong phiên hôm nay. Hãy chọn trạm ở khung trên để bắt đầu nhập!' 
+                      : 'Chưa có trạm nào được cập nhật tăng giá.'}
                   </td>
                 </tr>
               )}
