@@ -108,7 +108,7 @@ function doGet(e) {
 
     const idxBaoCaoVTT = findColIdxPattern(['báo cáo vtt', 'báo cáo', 'vb báo cáo', 'vtt']);
     const idxDiaChiDoiTac = findColIdxPattern(['địa chỉ đối tác', 'địa chỉ']);
-    const idxFileDinhKem = findColIdxPattern(['file đính kèm', 'link văn bản', 'file báo cáo', 'link file', 'file văn bản', 'file']);
+    const idxFileDinhKem = findColIdxPattern(['file', 'file đính kèm', 'link văn bản', 'file báo cáo', 'link file', 'file văn bản']);
     const idxGhiChu = findColIdx('ghi chú');
 
     const records = [];
@@ -367,7 +367,7 @@ function doPost(e) {
     updateFieldByPattern(['tên ngân hàng'], contents.tenNganHang);
     updateFieldByPattern(['báo cáo vtt', 'báo cáo', 'vb báo cáo', 'vtt', 'tiến độ'], contents.baoCaoVTT);
     updateFieldByPattern(['địa chỉ đối tác', 'địa chỉ'], contents.diaChiDoiTac);
-    updateFieldByPattern(['file đính kèm', 'link văn bản', 'file báo cáo', 'link file', 'file văn bản', 'file'], contents.fileDinhKem);
+    updateFieldByPattern(['file', 'file đính kèm', 'link văn bản', 'file báo cáo', 'link file', 'file văn bản'], contents.fileDinhKem);
     updateFieldByPattern(['ghi chú'], contents.ghiChu);
 
     return jsonResponse({
