@@ -734,32 +734,7 @@ export default function AddPriceIncreaseTab({ data, onSaveStation, isSaving, ser
               </div>
             )}
 
-            {/* Input Địa chỉ đối tác */}
-            <div>
-              <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '0.35rem' }}>
-                Địa chỉ đối tác:
-              </label>
-              <div style={{ position: 'relative' }}>
-                <input
-                  type="text"
-                  className="input-field"
-                  placeholder="Nhập địa chỉ nhà / khu vực của đối tác..."
-                  value={diaChiDoiTac}
-                  onChange={(e) => setDiaChiDoiTac(e.target.value)}
-                  disabled={!selectedStation}
-                  style={{
-                    width: '100%',
-                    padding: '0.65rem 1rem 0.65rem 2.2rem',
-                    fontSize: '0.85rem',
-                    borderRadius: 'var(--radius-md)',
-                    background: 'var(--bg-primary)',
-                    border: '1px solid var(--border-color)',
-                    color: 'var(--text-main)'
-                  }}
-                />
-                <MapPin size={16} style={{ position: 'absolute', left: '0.75rem', top: '50%', transform: 'translateY(-50%)', color: '#f43f5e' }} />
-              </div>
-            </div>
+
 
             {/* Input Báo cáo VTT */}
             <div>
