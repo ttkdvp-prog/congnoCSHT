@@ -50,14 +50,17 @@ function doGet(e) {
       const upList = [];
       if (upValues.length > 1) {
         for (let u = 1; u < upValues.length; u++) {
-          upList.push({
-            stt: upValues[u][0],
-            maCSHT: upValues[u][1],
-            soTienThanhToan: upValues[u][2],
-            soThangThanhToan: upValues[u][3],
-            tinhTrang: upValues[u][4],
-            ghiChu: upValues[u][5]
-          });
+          if (upValues[u][1] !== '' && upValues[u][1] !== null && upValues[u][1] !== undefined) {
+            upList.push({
+              rowIndex: u + 1,
+              stt: upValues[u][0],
+              maCSHT: upValues[u][1],
+              soTienThanhToan: upValues[u][2],
+              soThangThanhToan: upValues[u][3],
+              tinhTrang: upValues[u][4],
+              ghiChu: upValues[u][5]
+            });
+          }
         }
       }
       return jsonResponse({ status: 'success', data: upList });
@@ -322,6 +325,34 @@ function doPost(e) {
     }
 
     var ss = SpreadsheetApp.getActiveSpreadsheet();
+
+    // Handler for deleting a row directly from sheet 'up'
+    if (contents.action === 'deleteSheetUpRow') {
+      var sheetUpDel = ss.getSheetByName('up');
+      if (!sheetUpDel) return jsonResponse({ status: 'error', message: 'Sheet "up" không tồn tại' });
+      
+      var targetRow = contents.rowIndex;
+      var targetMa = String(contents.maCSHT || '').trim().toLowerCase();
+      
+      if (targetRow && targetRow > 1) {
+        var maxR = sheetUpDel.getLastRow();
+        if (targetRow <= maxR) {
+          sheetUpDel.deleteRow(targetRow);
+          return jsonResponse({ status: 'success', message: 'Đã xóa dòng ' + targetRow + ' thành công khỏi sheet "up"!' });
+        }
+      }
+      
+      if (targetMa) {
+        var upVals = sheetUpDel.getDataRange().getValues();
+        for (var d = upVals.length - 1; d >= 1; d--) {
+          if (String(upVals[d][1]).trim().toLowerCase() === targetMa) {
+            sheetUpDel.deleteRow(d + 1);
+            return jsonResponse({ status: 'success', message: 'Đã xóa trạm ' + contents.maCSHT + ' thành công khỏi sheet "up"!' });
+          }
+        }
+      }
+      return jsonResponse({ status: 'error', message: 'Không tìm thấy dòng tương ứng để xóa trên sheet "up"' });
+    }
 
     // Handler for uploading Excel rows directly to sheet 'up'
     if (contents.action === 'uploadSheetUp' && Array.isArray(contents.rows)) {

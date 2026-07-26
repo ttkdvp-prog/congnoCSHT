@@ -38,9 +38,9 @@ export default function UploadPaymentTab({ stationsData, apiUrl, onRefreshData }
   };
 
   // Fetch all historical records from Sheet 'up' via Apps Script API
-  const fetchUpSheetHistory = async () => {
+  const fetchUpSheetHistory = async (silent = false) => {
     if (!apiUrl) return;
-    setIsLoadingHistory(true);
+    if (!silent) setIsLoadingHistory(true);
     try {
       const endpoint = apiUrl + (apiUrl.includes('?') ? '&' : '?') + 'action=getUpData&_t=' + Date.now();
       const res = await fetch(endpoint);
@@ -51,13 +51,50 @@ export default function UploadPaymentTab({ stationsData, apiUrl, onRefreshData }
     } catch (err) {
       console.warn('Could not fetch sheet up history:', err);
     } finally {
-      setIsLoadingHistory(false);
+      if (!silent) setIsLoadingHistory(false);
     }
   };
 
+  // Auto-sync interval: Poll sheet 'up' every 5 seconds to reflect additions/deletions from Google Sheets instantly
   useEffect(() => {
     fetchUpSheetHistory();
+    const interval = setInterval(() => {
+      fetchUpSheetHistory(true);
+    }, 5000);
+    return () => clearInterval(interval);
   }, [apiUrl]);
+
+  // Handler for deleting a row from Sheet 'up' directly on Web App
+  const handleDeleteSheetUpRow = async (rowItem) => {
+    if (!window.confirm(`Bạn có chắc chắn muốn xóa trạm "${rowItem.maCSHT}" khỏi Sheet 'up' trên Google Sheets không?`)) {
+      return;
+    }
+
+    try {
+      const res = await fetch(apiUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain' },
+        body: JSON.stringify({
+          action: 'deleteSheetUpRow',
+          rowIndex: rowItem.rowIndex,
+          maCSHT: rowItem.maCSHT
+        })
+      });
+
+      const data = await res.json();
+
+      if (data && data.status === 'success') {
+        setAllUpSheetRecords(prev => prev.filter(r => (rowItem.rowIndex ? r.rowIndex !== rowItem.rowIndex : r.maCSHT !== rowItem.maCSHT)));
+        fetchUpSheetHistory(true);
+        if (onRefreshData) onRefreshData();
+      } else {
+        alert('Không thể xóa: ' + (data?.message || 'Lỗi không xác định'));
+      }
+    } catch (err) {
+      console.error('Error deleting row from sheet up:', err);
+      alert('Có lỗi khi kết nối đến máy chủ để xóa dòng.');
+    }
+  };
 
   // 1. Download Sample Excel Template for Sheet 'up'
   const handleDownloadTemplate = () => {
@@ -555,7 +592,10 @@ export default function UploadPaymentTab({ stationsData, apiUrl, onRefreshData }
 
         {/* Sub-Tab 3: All Sheet 'up' Records */}
         <button
-          onClick={() => setActiveSubView('all_sheet_up')}
+          onClick={() => {
+            setActiveSubView('all_sheet_up');
+            fetchUpSheetHistory();
+          }}
           style={{
             display: 'inline-flex',
             alignItems: 'center',
@@ -731,7 +771,7 @@ export default function UploadPaymentTab({ stationsData, apiUrl, onRefreshData }
                 {lastUploadedBatch.length === 0 ? (
                   <tr>
                     <td colSpan={6} style={{ textAlign: 'center', padding: '2.5rem', color: 'var(--text-muted)' }}>
-                      Chưa có dữ liệu vừa upload trong phiên này. Hãy chọn file Excel và bấm nút "🚀 Đẩy Dữ Liệu Lên Google Sheet".
+                      Chưa có dữ liệu vừa upload trong phiên này. Hãy chọn file Excel và bấm nút "🚀 Upload dữ liệu".
                     </td>
                   </tr>
                 ) : (
@@ -768,7 +808,7 @@ export default function UploadPaymentTab({ stationsData, apiUrl, onRefreshData }
                 <span>BIỂU 2: BẢNG TỔNG HỢP TOÀN BỘ CSHT ĐÃ UPLOAD (SHEET "UP") ({filteredAllUpRecords.length} trạm)</span>
               </h3>
               <p style={{ fontSize: '0.775rem', color: 'var(--text-secondary)', marginTop: '0.2rem' }}>
-                Dữ liệu được tải trực tiếp từ tab <strong>sheet 'up'</strong> trên Google Sheets • Tổng tiền lũy kế đã up: <strong style={{ color: '#34d399' }}>{formatMoney(allUpSum)}</strong>
+                Dữ liệu được đồng bộ tự động từ tab <strong>sheet 'up'</strong> trên Google Sheets • Tổng tiền lũy kế đã up: <strong style={{ color: '#34d399' }}>{formatMoney(allUpSum)}</strong>
               </p>
             </div>
 
@@ -820,25 +860,26 @@ export default function UploadPaymentTab({ stationsData, apiUrl, onRefreshData }
                   <th>SỐ THÁNG THANH TOÁN</th>
                   <th style={{ textAlign: 'center' }}>TÌNH TRẠNG</th>
                   <th>GHI CHÚ</th>
+                  <th style={{ textAlign: 'center', width: '60px' }}>XÓA</th>
                 </tr>
               </thead>
               <tbody>
                 {isLoadingHistory ? (
                   <tr>
-                    <td colSpan={6} style={{ textAlign: 'center', padding: '2.5rem', color: 'var(--text-muted)' }}>
+                    <td colSpan={7} style={{ textAlign: 'center', padding: '2.5rem', color: 'var(--text-muted)' }}>
                       <RefreshCw size={24} className="animate-spin" style={{ margin: '0 auto 0.5rem auto', color: '#a855f7' }} />
-                      Đang tải toàn bộ dữ liệu từ Sheet 'up'...
+                      Đang đồng bộ dữ liệu mới nhất từ Sheet 'up'...
                     </td>
                   </tr>
                 ) : filteredAllUpRecords.length === 0 ? (
                   <tr>
-                    <td colSpan={6} style={{ textAlign: 'center', padding: '2.5rem', color: 'var(--text-muted)' }}>
+                    <td colSpan={7} style={{ textAlign: 'center', padding: '2.5rem', color: 'var(--text-muted)' }}>
                       Chưa có dữ liệu nào trong Sheet 'up' phù hợp bộ lọc.
                     </td>
                   </tr>
                 ) : (
                   filteredAllUpRecords.map((row, idx) => (
-                    <tr key={idx}>
+                    <tr key={row.rowIndex || idx}>
                       <td style={{ textAlign: 'center', fontWeight: 600, color: 'var(--text-muted)' }}>{idx + 1}</td>
                       <td style={{ fontWeight: 700, color: '#60a5fa' }}>{row.maCSHT}</td>
                       <td style={{ textAlign: 'right', fontWeight: 700, color: '#34d399' }}>
@@ -854,6 +895,15 @@ export default function UploadPaymentTab({ stationsData, apiUrl, onRefreshData }
                         </span>
                       </td>
                       <td style={{ color: 'var(--text-muted)', fontSize: '0.8rem' }}>{row.ghiChu || '---'}</td>
+                      <td style={{ textAlign: 'center' }}>
+                        <button
+                          onClick={() => handleDeleteSheetUpRow(row)}
+                          style={{ background: 'none', border: 'none', color: '#f87171', cursor: 'pointer', padding: '0.2rem' }}
+                          title={`Xóa trạm ${row.maCSHT} khỏi Sheet 'up'`}
+                        >
+                          <Trash2 size={16} />
+                        </button>
+                      </td>
                     </tr>
                   ))
                 )}
