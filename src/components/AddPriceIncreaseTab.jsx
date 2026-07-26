@@ -2,7 +2,7 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { Search, PlusCircle, Save, Flame, Building, MapPin, DollarSign, Calendar, Edit3, X, AlertCircle, Sparkles, List, Trash2, FileText, User, Paperclip, Upload, ExternalLink, FileCheck, Download, CheckCircle2, Clock } from 'lucide-react';
 import * as XLSX from 'xlsx';
 
-export default function AddPriceIncreaseTab({ data, onSaveStation, isSaving }) {
+export default function AddPriceIncreaseTab({ data, onSaveStation, isSaving, serverSessionNewKeys = [], serverSessionEditedKeys = [] }) {
   const [searchTerm, setSearchTerm] = useState('');
   const [showDropdown, setShowDropdown] = useState(false);
   const [selectedStation, setSelectedStation] = useState(null);
@@ -45,6 +45,19 @@ export default function AddPriceIncreaseTab({ data, onSaveStation, isSaving }) {
       return [];
     }
   });
+
+  // Sync cross-device session keys from server (PC <-> Mobile)
+  useEffect(() => {
+    if (Array.isArray(serverSessionNewKeys) && serverSessionNewKeys.length > 0) {
+      setSessionNewKeys(prev => Array.from(new Set([...prev, ...serverSessionNewKeys])));
+    }
+  }, [serverSessionNewKeys]);
+
+  useEffect(() => {
+    if (Array.isArray(serverSessionEditedKeys) && serverSessionEditedKeys.length > 0) {
+      setSessionEditedKeys(prev => Array.from(new Set([...prev, ...serverSessionEditedKeys])));
+    }
+  }, [serverSessionEditedKeys]);
 
   // Table View Filter Mode: 'new' | 'edited' | 'chua_bao_cao' | 'da_bao_cao_chua_duyet' | 'vtt_dong_y' | 'all'
   const [tableViewMode, setTableViewMode] = useState(() => {
@@ -337,9 +350,16 @@ export default function AddPriceIncreaseTab({ data, onSaveStation, isSaving }) {
     return data.filter(st => sessionNewKeys.includes(getStationKey(st)));
   }, [data, sessionNewKeys]);
 
-  // Edited Existing Stations List in this Session
+  // Edited Existing Stations List in this Session (with smart cross-device fallback)
   const sessionEditedList = useMemo(() => {
-    return data.filter(st => sessionEditedKeys.includes(getStationKey(st)));
+    return data.filter(st => {
+      const key = getStationKey(st);
+      if (sessionEditedKeys.includes(key)) return true;
+      // Fallback for newly connected mobile devices: match stations with updated VTT reports, notes or attached files
+      const hasReport = st.baoCaoVTT && st.baoCaoVTT !== 'Chưa làm văn bản báo cáo';
+      const hasFile = Boolean(st.fileDinhKem);
+      return Boolean(hasReport || hasFile);
+    });
   }, [data, sessionEditedKeys]);
 
   // Active list based on view mode ('new' | 'edited' | 'chua_bao_cao' | 'da_bao_cao_chua_duyet' | 'vtt_dong_y' | 'all')

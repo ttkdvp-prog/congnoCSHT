@@ -270,10 +270,16 @@ function doGet(e) {
       });
     }
 
+    var scriptProps = PropertiesService.getScriptProperties();
+    var sessionNewKeys = JSON.parse(scriptProps.getProperty('csht_session_new_keys') || '[]');
+    var sessionEditedKeys = JSON.parse(scriptProps.getProperty('csht_session_edited_keys') || '[]');
+
     return jsonResponse({
       status: 'success',
       total: filtered.length,
       data: filtered,
+      sessionNewKeys: sessionNewKeys,
+      sessionEditedKeys: sessionEditedKeys,
       updatedAt: new Date().toISOString()
     });
 
@@ -392,6 +398,27 @@ function doPost(e) {
     updateFieldByPattern(['địa chỉ đối tác', 'địa chỉ'], contents.diaChiDoiTac);
     updateFieldByPattern(['file', 'file đính kèm', 'link văn bản', 'file báo cáo', 'link file', 'file văn bản'], finalFileUrl);
     updateFieldByPattern(['ghi chú'], contents.ghiChu);
+
+    // Save session keys for cross-device synchronization (PC <-> Mobile)
+    try {
+      var scriptProps = PropertiesService.getScriptProperties();
+      var keyStr = String(maCSHT || '').trim();
+      if (keyStr) {
+        if (contents.isNewlyAdded) {
+          var currNew = JSON.parse(scriptProps.getProperty('csht_session_new_keys') || '[]');
+          if (currNew.indexOf(keyStr) === -1) {
+            currNew.push(keyStr);
+            scriptProps.setProperty('csht_session_new_keys', JSON.stringify(currNew));
+          }
+        } else {
+          var currEdited = JSON.parse(scriptProps.getProperty('csht_session_edited_keys') || '[]');
+          if (currEdited.indexOf(keyStr) === -1) {
+            currEdited.push(keyStr);
+            scriptProps.setProperty('csht_session_edited_keys', JSON.stringify(currEdited));
+          }
+        }
+      }
+    } catch (sErr) {}
 
     return jsonResponse({
       status: 'success',

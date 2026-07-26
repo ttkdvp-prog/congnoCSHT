@@ -169,6 +169,9 @@ export default function App() {
   const [autoSync, setAutoSync] = useState(true);
   const [syncInterval, setSyncInterval] = useState(3000); // 3 seconds fast sync by default!
 
+  const [globalSessionNewKeys, setGlobalSessionNewKeys] = useState([]);
+  const [globalSessionEditedKeys, setGlobalSessionEditedKeys] = useState([]);
+
   // Load data from Google Apps Script if URL exists
   const fetchDataFromGAS = async (url, isSilent = false) => {
     if (!url) return;
@@ -179,6 +182,14 @@ export default function App() {
       const result = await res.json();
       if (result && result.status === 'success' && Array.isArray(result.data) && result.data.length > 0) {
         setData(processStationRecords(result.data));
+        if (Array.isArray(result.sessionNewKeys)) {
+          setGlobalSessionNewKeys(result.sessionNewKeys);
+          try { localStorage.setItem('csht_session_new_keys', JSON.stringify(result.sessionNewKeys)); } catch(e){}
+        }
+        if (Array.isArray(result.sessionEditedKeys)) {
+          setGlobalSessionEditedKeys(result.sessionEditedKeys);
+          try { localStorage.setItem('csht_session_edited_keys', JSON.stringify(result.sessionEditedKeys)); } catch(e){}
+        }
         setIsLive(true);
       } else {
         setIsLive(false);
@@ -612,6 +623,8 @@ export default function App() {
               data={data}
               onSaveStation={handleSaveStation}
               isSaving={isSaving}
+              serverSessionNewKeys={globalSessionNewKeys}
+              serverSessionEditedKeys={globalSessionEditedKeys}
             />
           )}
 
