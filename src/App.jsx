@@ -728,7 +728,7 @@ export default function App() {
 
       {/* Footer */}
       <footer style={{ textAlign: 'center', marginTop: '2.5rem', color: 'var(--text-muted)', fontSize: '0.8rem' }}>
-        Dashboard Quản Lý Công Nợ & Trạm Tăng Giá CSHT • Kết nối Google Apps Script & Google Sheets
+        Quản Lý Công Nợ & Trạm Tăng Giá CSHT
       </footer>
 
       {/* Full Station & Payment Edit Modal */}

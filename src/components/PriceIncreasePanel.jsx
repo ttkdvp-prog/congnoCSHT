@@ -86,7 +86,7 @@ export default function PriceIncreasePanel({ data, onEditStation, onExportPriceI
           </div>
           <div>
             <h2 style={{ fontSize: '1.1rem', fontWeight: 700, color: '#fbbf24' }}>
-              CHUYÊN MỤC QUẢN LÝ & CẬP NHẬT TRẠM TĂNG GIÁ ({tangGiaList.length} Trạm)
+              QUẢN LÝ & CẬP NHẬT TRẠM TĂNG GIÁ ({tangGiaList.length} Trạm)
             </h2>
             <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
               Danh sách và thông tin chi tiết các trạm điều chỉnh đơn giá năm 2026

@@ -37,7 +37,7 @@ export default function Header({
               DASHBOARD QUẢN LÝ CÔNG NỢ & TRẠM TĂNG GIÁ CSHT
             </h1>
             <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
-              VNPT Telecom • Dữ liệu kết nối Google Sheets ({totalCount} trạm)
+              TTHT Phú Thọ ({totalCount} trạm)
             </p>
           </div>
         </div>
