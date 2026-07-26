@@ -674,7 +674,16 @@ export default function AddPriceIncreaseTab({ data, onSaveStation, isSaving }) {
                           <span style={{ color: 'var(--text-muted)' }}>---</span>
                         )}
                       </td>
-                      <td style={{ padding: '0.6rem', color: 'var(--text-secondary)', fontSize: '0.8rem', maxWidth: '220px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                      <td style={{
+                        padding: '0.6rem',
+                        color: 'var(--text-secondary)',
+                        fontSize: '0.8rem',
+                        minWidth: '220px',
+                        maxWidth: '350px',
+                        whiteSpace: 'normal',
+                        wordBreak: 'break-word',
+                        lineHeight: 1.4
+                      }}>
                         {st.ghiChu || '---'}
                       </td>
                       <td style={{ padding: '0.6rem', textAlign: 'center' }}>
