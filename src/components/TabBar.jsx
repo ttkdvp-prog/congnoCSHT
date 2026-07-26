@@ -1,5 +1,4 @@
-import React from 'react';
-import { LayoutDashboard, PlusCircle, Flame, AlertCircle, Clock, CheckCircle2, Table, Layers } from 'lucide-react';
+import { LayoutDashboard, PlusCircle, Flame, AlertCircle, Clock, CheckCircle2, Table, Layers, UploadCloud } from 'lucide-react';
 
 export default function TabBar({ activeTab, onTabChange, counts }) {
   const tabs = [
@@ -9,6 +8,13 @@ export default function TabBar({ activeTab, onTabChange, counts }) {
       icon: LayoutDashboard,
       badge: null,
       color: '#3b82f6'
+    },
+    {
+      id: 'uploadPayment',
+      label: 'Upload Số Liệu (Sheet Up)',
+      icon: UploadCloud,
+      badge: 'Excel Up',
+      color: '#06b6d4'
     },
     {
       id: 'addPriceIncrease',

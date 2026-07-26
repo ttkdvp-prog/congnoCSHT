@@ -9,6 +9,7 @@ import KpiCards from './components/KpiCards';
 import FilterBar from './components/FilterBar';
 import PriceIncreasePanel from './components/PriceIncreasePanel';
 import AddPriceIncreaseTab from './components/AddPriceIncreaseTab';
+import UploadPaymentTab from './components/UploadPaymentTab';
 import AnalyticsSection from './components/AnalyticsSection';
 import DataTable from './components/DataTable';
 import EditPriceModal from './components/EditPriceModal';
@@ -623,6 +624,15 @@ export default function App() {
                 onExportPriceIncreaseExcel={handleExportPriceIncreaseExcel}
               />
             </>
+          )}
+
+          {/* TAB EXCEL UPLOAD TO SHEET 'UP' */}
+          {mainTab === 'uploadPayment' && (
+            <UploadPaymentTab
+              stationsData={data}
+              apiUrl={apiUrl}
+              onRefreshData={() => fetchDataFromGAS(apiUrl)}
+            />
           )}
 
           {/* TAB 2: ADD & UPDATE PRICE INCREASE STATIONS */}

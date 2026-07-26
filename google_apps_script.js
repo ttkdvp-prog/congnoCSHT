@@ -42,6 +42,27 @@ function doGet(e) {
     const params = e ? e.parameter : {};
 
     const ss = SpreadsheetApp.getActiveSpreadsheet();
+
+    if (params.action === 'getUpData') {
+      const sheetUp = ss.getSheetByName('up');
+      if (!sheetUp) return jsonResponse({ status: 'success', data: [] });
+      const upValues = sheetUp.getDataRange().getValues();
+      const upList = [];
+      if (upValues.length > 1) {
+        for (let u = 1; u < upValues.length; u++) {
+          upList.push({
+            stt: upValues[u][0],
+            maCSHT: upValues[u][1],
+            soTienThanhToan: upValues[u][2],
+            soThangThanhToan: upValues[u][3],
+            tinhTrang: upValues[u][4],
+            ghiChu: upValues[u][5]
+          });
+        }
+      }
+      return jsonResponse({ status: 'success', data: upList });
+    }
+
     const sheet = ss.getSheetByName(SHEET_NAME);
 
     if (!sheet) {
@@ -296,6 +317,80 @@ function doPost(e) {
     }
 
     var ss = SpreadsheetApp.getActiveSpreadsheet();
+
+    // Handler for uploading Excel rows directly to sheet 'up'
+    if (contents.action === 'uploadSheetUp' && Array.isArray(contents.rows)) {
+      var sheetUp = ss.getSheetByName('up');
+      if (!sheetUp) {
+        sheetUp = ss.insertSheet('up');
+        sheetUp.appendRow(['STT', 'Mã CSHT', 'số tiền thanh toán', 'số tháng thanh toán', 'Tình trạng', 'Ghi chú']);
+      }
+      
+      var upRows = contents.rows;
+      var addedCount = 0;
+
+      var sheetMain = ss.getSheetByName(SHEET_NAME);
+      var mainData = sheetMain ? sheetMain.getDataRange().getValues() : [];
+      var mainHeaders = mainData.length > 0 ? mainData[0] : [];
+      
+      var normalizeStr = function(str) {
+        return String(str || '').replace(/[\r\n]+/g, ' ').replace(/\s+/g, ' ').trim().toLowerCase();
+      };
+      var findMainColIdx = function(pattern) {
+        return mainHeaders.findIndex(function(h) {
+          return normalizeStr(h).indexOf(pattern.toLowerCase()) !== -1;
+        });
+      };
+      
+      var idxMaCSHTMain = findMainColIdx('mã csht');
+      var idxDaTT2026Main = findMainColIdx('đã thanh toán 2026');
+      var idxPhapLyMain = findMainColIdx('tình trạng pháp lý');
+      var idxGhiChuMain = findMainColIdx('ghi chú');
+
+      for (var r = 0; r < upRows.length; r++) {
+        var rowItem = upRows[r];
+        var maCSHT = String(rowItem.maCSHT || rowItem['Mã CSHT'] || rowItem.ma || '').trim();
+        var soTien = rowItem.soTienThanhToan || rowItem['số tiền thanh toán'] || rowItem.soTien || 0;
+        var soThang = rowItem.soThangThanhToan || rowItem['số tháng thanh toán'] || rowItem.soThang || '';
+        var tinhTrang = String(rowItem.tinhTrang || rowItem['Tình trạng'] || '').trim();
+        var ghiChu = String(rowItem.ghiChu || rowItem['Ghi chú'] || '').trim();
+
+        if (maCSHT) {
+          var lastRowUp = sheetUp.getLastRow();
+          sheetUp.appendRow([lastRowUp, maCSHT, soTien, soThang, tinhTrang, ghiChu]);
+          addedCount++;
+
+          // Synchronize back to 'Theo dõi đầy đủ' sheet for matching station
+          if (sheetMain && idxMaCSHTMain !== -1) {
+            for (var m = 1; m < mainData.length; m++) {
+              if (String(mainData[m][idxMaCSHTMain]).trim().toLowerCase() === maCSHT.toLowerCase()) {
+                var targetRowIndex = m + 1;
+                if (soTien > 0 && idxDaTT2026Main !== -1) {
+                  var currentVal = parseVnNumber(mainData[m][idxDaTT2026Main]);
+                  sheetMain.getRange(targetRowIndex, idxDaTT2026Main + 1).setValue(currentVal + parseVnNumber(soTien));
+                }
+                if (tinhTrang && idxPhapLyMain !== -1) {
+                  sheetMain.getRange(targetRowIndex, idxPhapLyMain + 1).setValue(tinhTrang);
+                }
+                if (ghiChu && idxGhiChuMain !== -1) {
+                  var oldGhiChu = String(mainData[m][idxGhiChuMain] || '');
+                  var newGhiChu = oldGhiChu ? (oldGhiChu + '; ' + ghiChu) : ghiChu;
+                  sheetMain.getRange(targetRowIndex, idxGhiChuMain + 1).setValue(newGhiChu);
+                }
+                break;
+              }
+            }
+          }
+        }
+      }
+
+      return jsonResponse({
+        status: 'success',
+        message: 'Đã upload thành công ' + addedCount + ' dòng dữ liệu thanh toán vào sheet "up"!',
+        addedCount: addedCount
+      });
+    }
+
     var sheet = ss.getSheetByName(SHEET_NAME);
 
     if (!sheet) {
