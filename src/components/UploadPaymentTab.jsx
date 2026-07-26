@@ -615,7 +615,7 @@ export default function UploadPaymentTab({ stationsData, apiUrl, onRefreshData }
                 }}
               >
                 {isUploading ? <RefreshCw size={18} className="animate-spin" /> : <UploadCloud size={18} />}
-                <span>{isUploading ? 'Đang Đẩy Lên Google Sheet...' : '🚀 ĐẨY DỮ LIỆU LÊN GOOGLE SHEET (SHEET "UP")'}</span>
+                <span>{isUploading ? 'Đang Upload dữ liệu...' : '🚀 Upload dữ liệu'}</span>
               </button>
             </div>
           </div>
