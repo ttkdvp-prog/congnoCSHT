@@ -355,8 +355,13 @@ export default function App() {
   const handleSaveStation = async (updatedStation) => {
     setIsSaving(true);
     try {
-      // 1. Update local state immediately
-      setData(prev => prev.map(item => item.maCSHT === updatedStation.maCSHT ? updatedStation : item));
+      // 1. Update local state immediately (match by rowIndex if available, otherwise maCSHT)
+      setData(prev => prev.map(item => {
+        const isMatch = (updatedStation.rowIndex && item.rowIndex)
+          ? item.rowIndex === updatedStation.rowIndex
+          : item.maCSHT === updatedStation.maCSHT;
+        return isMatch ? updatedStation : item;
+      }));
 
       // 2. If Google Apps Script API URL is set, sync directly to Google Sheet
       if (apiUrl) {

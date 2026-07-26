@@ -98,8 +98,16 @@ function doGet(e) {
     const idxPhapLy = findColIdx('tình trạng pháp lý');
     const idxNgayThanhToan = findColIdx('ngày thanh toán');
     const idxDaThanhToan2026 = findColIdx('đã thanh toán 2026');
-    const idxBaoCaoVTT = findColIdx('báo cáo vtt');
-    const idxDiaChiDoiTac = findColIdx('địa chỉ đối tác');
+    const findColIdxPattern = function(patterns) {
+      for (var p = 0; p < patterns.length; p++) {
+        var idx = findColIdx(patterns[p]);
+        if (idx !== -1) return idx;
+      }
+      return -1;
+    };
+
+    const idxBaoCaoVTT = findColIdxPattern(['báo cáo vtt', 'báo cáo', 'vb báo cáo', 'vtt']);
+    const idxDiaChiDoiTac = findColIdxPattern(['địa chỉ đối tác', 'địa chỉ']);
     const idxGhiChu = findColIdx('ghi chú');
 
     const records = [];
@@ -353,7 +361,7 @@ function doPost(e) {
     updateFieldByPattern(['người thụ hưởng'], contents.nguoiThuHuong);
     updateFieldByPattern(['số tài khoản'], contents.soTaiKhoan);
     updateFieldByPattern(['tên ngân hàng'], contents.tenNganHang);
-    updateFieldByPattern(['báo cáo vtt', 'báo cáo'], contents.baoCaoVTT);
+    updateFieldByPattern(['báo cáo vtt', 'báo cáo', 'vb báo cáo', 'vtt', 'tiến độ'], contents.baoCaoVTT);
     updateFieldByPattern(['địa chỉ đối tác', 'địa chỉ'], contents.diaChiDoiTac);
     updateFieldByPattern(['ghi chú'], contents.ghiChu);
 
