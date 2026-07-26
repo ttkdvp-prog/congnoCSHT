@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { Search, PlusCircle, Save, Flame, Building, MapPin, DollarSign, Calendar, Edit3, X, AlertCircle, Sparkles, List, Trash2, FileText, User } from 'lucide-react';
+import { Search, PlusCircle, Save, Flame, Building, MapPin, DollarSign, Calendar, Edit3, X, AlertCircle, Sparkles, List, Trash2, FileText, User, Paperclip, Upload, ExternalLink, FileCheck } from 'lucide-react';
 
 export default function AddPriceIncreaseTab({ data, onSaveStation, isSaving }) {
   const [searchTerm, setSearchTerm] = useState('');
@@ -12,7 +12,19 @@ export default function AddPriceIncreaseTab({ data, onSaveStation, isSaving }) {
   const [lyDo, setLyDo] = useState('');
   const [baoCaoVTT, setBaoCaoVTT] = useState('Chưa làm văn bản báo cáo');
   const [diaChiDoiTac, setDiaChiDoiTac] = useState('');
+  const [fileDinhKem, setFileDinhKem] = useState('');
+  const [fileName, setFileName] = useState('');
   const [tableSearch, setTableSearch] = useState('');
+
+  // List of recently attached files in this session (Shared across multiple stations)
+  const [recentFiles, setRecentFiles] = useState(() => {
+    try {
+      const saved = localStorage.getItem('csht_recent_attached_files');
+      return saved ? JSON.parse(saved) : [];
+    } catch (e) {
+      return [];
+    }
+  });
 
   // Session-level updated stations (unique key: rowIndex or maCSHT_rowIndex)
   const [sessionUpdatedKeys, setSessionUpdatedKeys] = useState(() => {
@@ -62,7 +74,7 @@ export default function AddPriceIncreaseTab({ data, onSaveStation, isSaving }) {
     return st.rowIndex ? `row_${st.rowIndex}` : `ma_${st.maCSHT}`;
   };
 
-  // Filter stations based on search term (searches maCSHT, tenCSHT, site, chuHopDong, diaChiDoiTac)
+  // Filter stations based on search term
   const searchResults = useMemo(() => {
     if (!searchTerm.trim()) return [];
     const q = searchTerm.toLowerCase().trim();
@@ -89,6 +101,8 @@ export default function AddPriceIncreaseTab({ data, onSaveStation, isSaving }) {
     setLyDo(station.ghiChu || '');
     setBaoCaoVTT(station.baoCaoVTT || 'Chưa làm văn bản báo cáo');
     setDiaChiDoiTac(station.diaChiDoiTac || '');
+    setFileDinhKem(station.fileDinhKem || '');
+    setFileName(station.fileDinhKem ? (station.fileDinhKem.startsWith('data:') ? 'File_Văn_Bản_Đính_Kèm' : station.fileDinhKem) : '');
   };
 
   const handleClearSelection = () => {
@@ -99,6 +113,38 @@ export default function AddPriceIncreaseTab({ data, onSaveStation, isSaving }) {
     setLyDo('');
     setBaoCaoVTT('Chưa làm văn bản báo cáo');
     setDiaChiDoiTac('');
+    setFileDinhKem('');
+    setFileName('');
+  };
+
+  // Handle File Upload from Computer
+  const handleFileUpload = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (evt) => {
+      const fileUrl = evt.target.result;
+      const fName = file.name;
+      setFileDinhKem(fileUrl);
+      setFileName(fName);
+
+      // Save to recent files list for quick reuse across multiple stations
+      setRecentFiles(prev => {
+        const exists = prev.some(item => item.name === fName || item.url === fileUrl);
+        if (exists) return prev;
+        const updated = [{ name: fName, url: fileUrl }, ...prev].slice(0, 10);
+        try { localStorage.setItem('csht_recent_attached_files', JSON.stringify(updated)); } catch (err) {}
+        return updated;
+      });
+    };
+    reader.readAsDataURL(file);
+  };
+
+  // Select a previously attached file
+  const handleSelectRecentFile = (fileItem) => {
+    setFileDinhKem(fileItem.url);
+    setFileName(fileItem.name);
   };
 
   // Clear Session List
@@ -132,7 +178,8 @@ export default function AddPriceIncreaseTab({ data, onSaveStation, isSaving }) {
       thoiDiemTangGia: thoiDiem.trim(),
       ghiChu: lyDo.trim(),
       baoCaoVTT: baoCaoVTT.trim() || 'Chưa làm văn bản báo cáo',
-      diaChiDoiTac: diaChiDoiTac.trim()
+      diaChiDoiTac: diaChiDoiTac.trim(),
+      fileDinhKem: fileDinhKem.trim()
     };
 
     // Record unique key in session list
@@ -200,7 +247,7 @@ export default function AddPriceIncreaseTab({ data, onSaveStation, isSaving }) {
               NHẬP & CẬP NHẬT TRẠM TĂNG GIÁ CSHT
             </h2>
             <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
-              Tìm kiếm trạm theo Mã CSHT / Tên trạm, nhập đơn giá mới, địa chỉ đối tác, tiến độ báo cáo VTT và thời điểm tăng giá, tự động đồng bộ sang Google Sheet.
+              Tìm kiếm trạm theo Mã CSHT / Tên trạm, nhập đơn giá mới, địa chỉ đối tác, tiến độ báo cáo VTT, gắn file văn bản đính kèm và tự động đồng bộ sang Google Sheet.
             </p>
           </div>
         </div>
@@ -342,6 +389,17 @@ export default function AddPriceIncreaseTab({ data, onSaveStation, isSaving }) {
                 <span>Địa chỉ đối tác: <strong style={{ color: selectedStation.diaChiDoiTac ? '#34d399' : 'var(--text-muted)' }}>{selectedStation.diaChiDoiTac || 'Chưa có thông tin địa chỉ'}</strong></span>
               </div>
 
+              {selectedStation.fileDinhKem && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.8rem', background: 'rgba(59, 130, 246, 0.15)', padding: '0.4rem 0.6rem', borderRadius: '6px', border: '1px solid rgba(59, 130, 246, 0.3)' }}>
+                  <Paperclip size={14} style={{ color: '#60a5fa' }} />
+                  <span style={{ color: 'var(--text-secondary)' }}>File đính kèm hiện tại:</span>
+                  <a href={selectedStation.fileDinhKem} target="_blank" rel="noopener noreferrer" style={{ color: '#60a5fa', fontWeight: 700, textDecoration: 'underline', display: 'flex', alignItems: 'center', gap: '0.2rem' }}>
+                    <span>Xem file</span>
+                    <ExternalLink size={12} />
+                  </a>
+                </div>
+              )}
+
               <div style={{
                 marginTop: '0.4rem',
                 paddingTop: '0.6rem',
@@ -374,7 +432,7 @@ export default function AddPriceIncreaseTab({ data, onSaveStation, isSaving }) {
         <div className="glass-panel" style={{ padding: '1.25rem' }}>
           <h3 style={{ fontSize: '1rem', fontWeight: 700, color: '#fbbf24', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
             <Edit3 size={18} />
-            2. Thông Tin Đề Xuất Tăng Giá & Địa Chỉ Đối Tác
+            2. Thông Tin Đề Xuất Tăng Giá & Đính Kèm File
           </h3>
 
           <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
@@ -541,6 +599,100 @@ export default function AddPriceIncreaseTab({ data, onSaveStation, isSaving }) {
               </div>
             </div>
 
+            {/* Input Gắn File Văn Bản / Link Báo Cáo (Dùng chung 1 file cho nhiều trạm) */}
+            <div>
+              <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '0.35rem' }}>
+                Gắn File Văn Bản / Link Báo Cáo:
+              </label>
+
+              {/* Shared Document Chips (Cho phép chọn lại 1 file đã dán/tải để dùng chung cho nhiều trạm) */}
+              {recentFiles.length > 0 && (
+                <div style={{ marginBottom: '0.5rem' }}>
+                  <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', display: 'block', marginBottom: '0.25rem' }}>
+                    📄 Gắn nhanh văn bản đã lưu (1 file dùng cho nhiều trạm):
+                  </span>
+                  <div style={{ display: 'flex', gap: '0.35rem', flexWrap: 'wrap' }}>
+                    {recentFiles.map((f, i) => (
+                      <button
+                        key={i}
+                        type="button"
+                        onClick={() => handleSelectRecentFile(f)}
+                        disabled={!selectedStation}
+                        style={{
+                          padding: '0.2rem 0.5rem',
+                          fontSize: '0.7rem',
+                          borderRadius: '6px',
+                          border: fileDinhKem === f.url ? '1px solid #3b82f6' : '1px solid var(--border-color)',
+                          background: fileDinhKem === f.url ? 'rgba(59, 130, 246, 0.2)' : 'rgba(255,255,255,0.04)',
+                          color: fileDinhKem === f.url ? '#60a5fa' : 'var(--text-secondary)',
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '0.3rem'
+                        }}
+                      >
+                        <FileCheck size={12} />
+                        <span style={{ maxWidth: '160px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{f.name}</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Upload & Link Input Controls */}
+              <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                <label className="btn btn-secondary" style={{ padding: '0.65rem 0.85rem', fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: '0.4rem', cursor: selectedStation ? 'pointer' : 'not-allowed', opacity: selectedStation ? 1 : 0.6, flexShrink: 0 }}>
+                  <Upload size={14} />
+                  <span>Chọn File</span>
+                  <input
+                    type="file"
+                    onChange={handleFileUpload}
+                    disabled={!selectedStation}
+                    accept=".pdf,.doc,.docx,.png,.jpg,.jpeg"
+                    style={{ display: 'none' }}
+                  />
+                </label>
+
+                <div style={{ position: 'relative', width: '100%' }}>
+                  <input
+                    type="text"
+                    className="input-field"
+                    placeholder="Hoặc dán Link Google Drive/OneDrive/URL..."
+                    value={fileDinhKem}
+                    onChange={(e) => {
+                      setFileDinhKem(e.target.value);
+                      setFileName(e.target.value ? (e.target.value.startsWith('data:') ? 'File_Dinh_Kem' : e.target.value) : '');
+                    }}
+                    disabled={!selectedStation}
+                    style={{
+                      width: '100%',
+                      padding: '0.65rem 1rem 0.65rem 2.2rem',
+                      fontSize: '0.85rem',
+                      borderRadius: 'var(--radius-md)',
+                      background: 'var(--bg-primary)',
+                      border: '1px solid var(--border-color)',
+                      color: 'var(--text-main)'
+                    }}
+                  />
+                  <Paperclip size={16} style={{ position: 'absolute', left: '0.75rem', top: '50%', transform: 'translateY(-50%)', color: '#3b82f6' }} />
+                </div>
+              </div>
+
+              {fileName && (
+                <div style={{ marginTop: '0.35rem', fontSize: '0.75rem', color: '#34d399', display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
+                  <FileCheck size={14} />
+                  <span>Đã gắn: <strong>{fileName}</strong></span>
+                  <button
+                    type="button"
+                    onClick={() => { setFileDinhKem(''); setFileName(''); }}
+                    style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', padding: 0, marginLeft: '0.5rem' }}
+                  >
+                    (Hủy gắn)
+                  </button>
+                </div>
+              )}
+            </div>
+
             {/* Input Thời điểm tăng giá */}
             <div>
               <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '0.35rem' }}>
@@ -634,7 +786,7 @@ export default function AddPriceIncreaseTab({ data, onSaveStation, isSaving }) {
               </h3>
             </div>
             <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
-              Chế độ xem phân loại giúp theo dõi chính xác địa chỉ đối tác, tiến độ Báo cáo VTT và các trạm vừa cập nhật.
+              Chế độ xem phân loại giúp theo dõi chính xác file đính kèm, tiến độ Báo cáo VTT và các trạm vừa cập nhật.
             </p>
           </div>
 
@@ -748,6 +900,7 @@ export default function AddPriceIncreaseTab({ data, onSaveStation, isSaving }) {
                 <th style={{ padding: '0.75rem', textAlign: 'right' }}>Tăng / Tháng</th>
                 <th style={{ padding: '0.75rem', textAlign: 'center' }}>Thời Điểm Tăng</th>
                 <th style={{ padding: '0.75rem' }}>Báo Cáo VTT</th>
+                <th style={{ padding: '0.75rem', textAlign: 'center' }}>Văn Bản / File</th>
                 <th style={{ padding: '0.75rem' }}>Lý Do / Ghi Chú</th>
                 <th style={{ padding: '0.75rem', textAlign: 'center' }}>Thao Tác</th>
               </tr>
@@ -827,6 +980,26 @@ export default function AddPriceIncreaseTab({ data, onSaveStation, isSaving }) {
                         )}
                       </td>
 
+                      {/* FILE ĐÍNH KÈM / VĂN BẢN CELL */}
+                      <td style={{ padding: '0.6rem', textAlign: 'center', fontSize: '0.8rem' }}>
+                        {st.fileDinhKem ? (
+                          <a
+                            href={st.fileDinhKem}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="badge badge-blue"
+                            style={{ padding: '0.3rem 0.6rem', display: 'inline-flex', alignItems: 'center', gap: '0.3rem', textDecoration: 'none' }}
+                            title="Mở văn bản đính kèm"
+                          >
+                            <Paperclip size={12} />
+                            <span>Xem File</span>
+                            <ExternalLink size={10} />
+                          </a>
+                        ) : (
+                          <span style={{ color: 'var(--text-muted)' }}>---</span>
+                        )}
+                      </td>
+
                       <td style={{
                         padding: '0.6rem',
                         color: 'var(--text-secondary)',
@@ -855,7 +1028,7 @@ export default function AddPriceIncreaseTab({ data, onSaveStation, isSaving }) {
                 })
               ) : (
                 <tr>
-                  <td colSpan="12" style={{ textAlign: 'center', padding: '2.5rem', color: 'var(--text-muted)' }}>
+                  <td colSpan="13" style={{ textAlign: 'center', padding: '2.5rem', color: 'var(--text-muted)' }}>
                     {tableViewMode === 'session' 
                       ? 'Chưa có trạm nào được nhập mới trong phiên hôm nay. Vui lòng chọn trạm phía trên để bắt đầu nhập!' 
                       : 'Chưa có trạm nào được cập nhật tăng giá.'}

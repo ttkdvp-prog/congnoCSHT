@@ -108,6 +108,7 @@ function doGet(e) {
 
     const idxBaoCaoVTT = findColIdxPattern(['báo cáo vtt', 'báo cáo', 'vb báo cáo', 'vtt']);
     const idxDiaChiDoiTac = findColIdxPattern(['địa chỉ đối tác', 'địa chỉ']);
+    const idxFileDinhKem = findColIdxPattern(['file đính kèm', 'link văn bản', 'file báo cáo', 'link file', 'file văn bản', 'file']);
     const idxGhiChu = findColIdx('ghi chú');
 
     const records = [];
@@ -194,6 +195,7 @@ function doGet(e) {
       const rawBaoCaoVTT = String(row[idxBaoCaoVTT] || '').trim();
       const baoCaoVTT = rawBaoCaoVTT || (isTangGia ? 'Chưa làm văn bản báo cáo' : '');
       const diaChiDoiTac = String(row[idxDiaChiDoiTac] || '').trim();
+      const fileDinhKem = String(row[idxFileDinhKem] || '').trim();
       const ghiChu = String(row[idxGhiChu] || '').trim();
 
       let thangDaTT2026 = countMonthsPaid2026;
@@ -249,6 +251,7 @@ function doGet(e) {
         isDaThanhToan: isDaThanhToan,
         baoCaoVTT: baoCaoVTT,
         diaChiDoiTac: diaChiDoiTac,
+        fileDinhKem: fileDinhKem,
         ghiChu: ghiChu
       });
     }
@@ -364,6 +367,7 @@ function doPost(e) {
     updateFieldByPattern(['tên ngân hàng'], contents.tenNganHang);
     updateFieldByPattern(['báo cáo vtt', 'báo cáo', 'vb báo cáo', 'vtt', 'tiến độ'], contents.baoCaoVTT);
     updateFieldByPattern(['địa chỉ đối tác', 'địa chỉ'], contents.diaChiDoiTac);
+    updateFieldByPattern(['file đính kèm', 'link văn bản', 'file báo cáo', 'link file', 'file văn bản', 'file'], contents.fileDinhKem);
     updateFieldByPattern(['ghi chú'], contents.ghiChu);
 
     return jsonResponse({
