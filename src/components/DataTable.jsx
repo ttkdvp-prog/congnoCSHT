@@ -105,9 +105,9 @@ export default function DataTable({ data, onViewDetail, onEditPrice }) {
                 </td>
               </tr>
             ) : (
-              currentRows.map((row) => (
-                <tr key={row.maCSHT + '-' + row.stt}>
-                  <td>{row.stt}</td>
+              currentRows.map((row, idx) => (
+                <tr key={row.maCSHT + '-' + idx}>
+                  <td style={{ fontWeight: 600, color: 'var(--text-secondary)' }}>{startIndex + idx + 1}</td>
                   <td style={{ fontWeight: 700, color: 'var(--accent-blue)' }}>
                     {row.maCSHT}
                   </td>
