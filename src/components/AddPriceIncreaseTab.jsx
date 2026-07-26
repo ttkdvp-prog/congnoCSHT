@@ -1,5 +1,6 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { Search, PlusCircle, Save, Flame, Building, MapPin, DollarSign, Calendar, Edit3, X, AlertCircle, Sparkles, List, Trash2, FileText, User, Paperclip, Upload, ExternalLink, FileCheck } from 'lucide-react';
+import { Search, PlusCircle, Save, Flame, Building, MapPin, DollarSign, Calendar, Edit3, X, AlertCircle, Sparkles, List, Trash2, FileText, User, Paperclip, Upload, ExternalLink, FileCheck, Download, CheckCircle2, Clock } from 'lucide-react';
+import * as XLSX from 'xlsx';
 
 export default function AddPriceIncreaseTab({ data, onSaveStation, isSaving }) {
   const [searchTerm, setSearchTerm] = useState('');
@@ -45,7 +46,7 @@ export default function AddPriceIncreaseTab({ data, onSaveStation, isSaving }) {
     }
   });
 
-  // Table View Filter Mode: 'new' (trạm mới nhập thêm) | 'edited' (trạm vừa chỉnh sửa) | 'all' (tất cả trạm tăng giá)
+  // Table View Filter Mode: 'new' | 'edited' | 'chua_bao_cao' | 'da_bao_cao_chua_duyet' | 'vtt_dong_y' | 'all'
   const [tableViewMode, setTableViewMode] = useState(() => {
     try {
       const savedNew = localStorage.getItem('csht_session_new_keys');
@@ -318,6 +319,19 @@ export default function AddPriceIncreaseTab({ data, onSaveStation, isSaving }) {
     return data.filter(st => st.isTangGia);
   }, [data]);
 
+  // Filter VTT Report Progress Categories
+  const chuaBaoCaoList = useMemo(() => {
+    return tangGiaList.filter(st => !st.baoCaoVTT || st.baoCaoVTT === 'Chưa làm văn bản báo cáo');
+  }, [tangGiaList]);
+
+  const daBaoCaoChuaDuyetList = useMemo(() => {
+    return tangGiaList.filter(st => st.baoCaoVTT && st.baoCaoVTT !== 'Chưa làm văn bản báo cáo' && !st.baoCaoVTT.toLowerCase().includes('đồng ý'));
+  }, [tangGiaList]);
+
+  const vttDongYList = useMemo(() => {
+    return tangGiaList.filter(st => st.baoCaoVTT && st.baoCaoVTT.toLowerCase().includes('đồng ý'));
+  }, [tangGiaList]);
+
   // Newly Added Stations List in this Session
   const sessionNewList = useMemo(() => {
     return data.filter(st => sessionNewKeys.includes(getStationKey(st)));
@@ -328,11 +342,14 @@ export default function AddPriceIncreaseTab({ data, onSaveStation, isSaving }) {
     return data.filter(st => sessionEditedKeys.includes(getStationKey(st)));
   }, [data, sessionEditedKeys]);
 
-  // Active list based on view mode ('new' vs 'edited' vs 'all')
+  // Active list based on view mode ('new' | 'edited' | 'chua_bao_cao' | 'da_bao_cao_chua_duyet' | 'vtt_dong_y' | 'all')
   const activeDisplayList = useMemo(() => {
     let list = tangGiaList;
     if (tableViewMode === 'new') list = sessionNewList;
     else if (tableViewMode === 'edited') list = sessionEditedList;
+    else if (tableViewMode === 'chua_bao_cao') list = chuaBaoCaoList;
+    else if (tableViewMode === 'da_bao_cao_chua_duyet') list = daBaoCaoChuaDuyetList;
+    else if (tableViewMode === 'vtt_dong_y') list = vttDongYList;
 
     if (!tableSearch.trim()) return list;
     const q = tableSearch.toLowerCase().trim();
@@ -345,12 +362,72 @@ export default function AddPriceIncreaseTab({ data, onSaveStation, isSaving }) {
       st.diaChiDoiTac?.toLowerCase().includes(q) ||
       st.baoCaoVTT?.toLowerCase().includes(q)
     );
-  }, [tableViewMode, sessionNewList, sessionEditedList, tangGiaList, tableSearch]);
+  }, [tableViewMode, sessionNewList, sessionEditedList, chuaBaoCaoList, daBaoCaoChuaDuyetList, vttDongYList, tangGiaList, tableSearch]);
 
   // Dynamic KPI total calculated cleanly from unique items in active display list
   const totalChenhLechMonth = useMemo(() => {
     return activeDisplayList.reduce((sum, item) => sum + (item.chenhLechDonGia || 0), 0);
   }, [activeDisplayList]);
+
+  // Excel Export Handler for the Currently Active Table View
+  const handleExportActiveTableExcel = () => {
+    if (activeDisplayList.length === 0) {
+      alert('Không có dữ liệu trong biểu này để xuất Excel.');
+      return;
+    }
+
+    const exportRows = activeDisplayList.map((st, index) => {
+      const donGiaCu = st.donGia2025 || 0;
+      const donGiaMoi = st.deXuatT7 > 0 ? st.deXuatT7 : (st.donGia2026 || donGiaCu);
+      const diff = st.chenhLechDonGia || Math.max(0, donGiaMoi - donGiaCu);
+
+      return {
+        'STT': index + 1,
+        'Mã CSHT': st.maCSHT || '',
+        'Tên CSHT': st.tenCSHT || '',
+        'Site': st.site || '',
+        'Tổ Hạ Tầng': st.toHaTang || '',
+        'Chủ Hợp Đồng': st.chuHopDong || '',
+        'Địa Chỉ Đối Tác': st.diaChiDoiTac || '',
+        'Đơn Giá Cũ 2025 (VNĐ)': donGiaCu,
+        'Đơn Giá Mới Tăng (VNĐ)': donGiaMoi,
+        'Tăng Mới / Tháng (VNĐ)': diff,
+        'Thời Điểm Tăng Giá': st.thoiDiemTangGia || '',
+        'Báo Cáo VTT': st.baoCaoVTT || 'Chưa làm văn bản báo cáo',
+        'Văn Bản / Link Đính Kèm': st.fileDinhKem || '',
+        'Ghi Chú / Lý Do': st.ghiChu || ''
+      };
+    });
+
+    let sheetName = 'Danh_Sach_Tram';
+    let filePrefix = 'Bieu_Thong_Ke';
+
+    if (tableViewMode === 'new') {
+      sheetName = 'Tram_Moi_Nhap';
+      filePrefix = 'Danh_Sach_Tram_Moi_Nhap';
+    } else if (tableViewMode === 'edited') {
+      sheetName = 'Tram_Vua_Sua';
+      filePrefix = 'Danh_Sach_Tram_Vua_Sua';
+    } else if (tableViewMode === 'chua_bao_cao') {
+      sheetName = 'Chua_Lam_VB_Bao_Cao';
+      filePrefix = 'Danh_Sach_Tram_Chua_Lam_VB_Bao_Cao';
+    } else if (tableViewMode === 'da_bao_cao_chua_duyet') {
+      sheetName = 'Da_Bao_Cao_VTT_Chua_Duyet';
+      filePrefix = 'Danh_Sach_Tram_Da_Bao_Cao_VTT_Chua_Duyet';
+    } else if (tableViewMode === 'vtt_dong_y') {
+      sheetName = 'VTT_Da_Dong_Y';
+      filePrefix = 'Danh_Sach_Tram_VTT_Da_Dong_Y';
+    } else {
+      sheetName = 'Tat_Ca_Tram_Tang_Gia';
+      filePrefix = 'Danh_Sach_Tat_Ca_Tram_Tang_Gia';
+    }
+
+    const ws = XLSX.utils.json_to_sheet(exportRows);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, sheetName);
+    const dateStr = new Date().toISOString().slice(0, 10);
+    XLSX.writeFile(wb, `${filePrefix}_${dateStr}.xlsx`);
+  };
 
   const formatVND = (val) => {
     if (!val && val !== 0) return '0 ₫';
@@ -953,80 +1030,42 @@ export default function AddPriceIncreaseTab({ data, onSaveStation, isSaving }) {
                   ? `Biểu 1: Danh Sách Trạm Mới Nhập Thêm (${sessionNewList.length} trạm)` 
                   : tableViewMode === 'edited'
                   ? `Biểu 2: Danh Sách Trạm Vừa Chỉnh Sửa (${sessionEditedList.length} trạm)`
-                  : `Biểu 3: Danh Sách Tất Cả Trạm Tăng Giá (${tangGiaList.length} trạm)`}
+                  : tableViewMode === 'chua_bao_cao'
+                  ? `Biểu 3: Danh Sách Trạm Chưa Làm Văn Bản Báo Cáo (${chuaBaoCaoList.length} trạm)`
+                  : tableViewMode === 'da_bao_cao_chua_duyet'
+                  ? `Biểu 4: Danh Sách Trạm Đã Báo Cáo Nhưng VTT Chưa Duyệt (${daBaoCaoChuaDuyetList.length} trạm)`
+                  : tableViewMode === 'vtt_dong_y'
+                  ? `Biểu 5: Danh Sách Trạm VTT Đã Đồng Ý (${vttDongYList.length} trạm)`
+                  : `Biểu 6: Danh Sách Tất Cả Trạm Tăng Giá (${tangGiaList.length} trạm)`}
               </h3>
             </div>
             <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
-              Thống kê chuẩn xác theo từng biểu riêng biệt, không cộng dồn lũy kế sai lệch.
+              Thống kê chuẩn xác theo từng biểu riêng biệt. Có chức năng xuất file Excel riêng cho từng biểu.
             </p>
           </div>
 
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
-            {/* View Mode Buttons */}
-            <div style={{ display: 'flex', background: 'var(--bg-primary)', padding: '0.25rem', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-color)', gap: '0.25rem' }}>
-              <button
-                type="button"
-                onClick={() => setTableViewMode('new')}
-                style={{
-                  padding: '0.4rem 0.75rem',
-                  fontSize: '0.775rem',
-                  fontWeight: tableViewMode === 'new' ? 700 : 500,
-                  borderRadius: 'var(--radius-sm)',
-                  border: 'none',
-                  background: tableViewMode === 'new' ? '#3b82f6' : 'transparent',
-                  color: tableViewMode === 'new' ? '#fff' : 'var(--text-secondary)',
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '0.35rem'
-                }}
-              >
-                <Sparkles size={14} />
-                <span>Trạm Mới Nhập ({sessionNewList.length})</span>
-              </button>
-              
-              <button
-                type="button"
-                onClick={() => setTableViewMode('edited')}
-                style={{
-                  padding: '0.4rem 0.75rem',
-                  fontSize: '0.775rem',
-                  fontWeight: tableViewMode === 'edited' ? 700 : 500,
-                  borderRadius: 'var(--radius-sm)',
-                  border: 'none',
-                  background: tableViewMode === 'edited' ? '#8b5cf6' : 'transparent',
-                  color: tableViewMode === 'edited' ? '#fff' : 'var(--text-secondary)',
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '0.35rem'
-                }}
-              >
-                <Edit3 size={14} />
-                <span>Trạm Vừa Sửa ({sessionEditedList.length})</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => setTableViewMode('all')}
-                style={{
-                  padding: '0.4rem 0.75rem',
-                  fontSize: '0.775rem',
-                  fontWeight: tableViewMode === 'all' ? 700 : 500,
-                  borderRadius: 'var(--radius-sm)',
-                  border: 'none',
-                  background: tableViewMode === 'all' ? '#f59e0b' : 'transparent',
-                  color: tableViewMode === 'all' ? '#fff' : 'var(--text-secondary)',
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '0.35rem'
-                }}
-              >
-                <List size={14} />
-                <span>Tất Cả Trạm ({tangGiaList.length})</span>
-              </button>
-            </div>
+            
+            {/* EXPORT EXCEL BUTTON FOR ACTIVE TABLE */}
+            <button
+              type="button"
+              onClick={handleExportActiveTableExcel}
+              className="btn btn-emerald"
+              style={{
+                padding: '0.45rem 0.85rem',
+                fontSize: '0.8rem',
+                fontWeight: 700,
+                borderRadius: 'var(--radius-md)',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.4rem',
+                boxShadow: '0 2px 8px rgba(16, 185, 129, 0.25)'
+              }}
+              title="Xuất file Excel cho đúng danh sách biểu đang xem"
+            >
+              <Download size={15} />
+              <span>Xuất Excel Biểu Này ({activeDisplayList.length})</span>
+            </button>
 
             {/* Clear Session Lists Button */}
             {(sessionNewList.length > 0 || sessionEditedList.length > 0) && (
@@ -1034,7 +1073,7 @@ export default function AddPriceIncreaseTab({ data, onSaveStation, isSaving }) {
                 type="button"
                 onClick={handleClearSessionList}
                 className="btn btn-secondary"
-                style={{ padding: '0.4rem 0.75rem', fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.35rem' }}
+                style={{ padding: '0.45rem 0.75rem', fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.35rem' }}
                 title="Làm mới danh sách theo dõi phiên làm việc"
               >
                 <Trash2 size={13} />
@@ -1050,6 +1089,135 @@ export default function AddPriceIncreaseTab({ data, onSaveStation, isSaving }) {
           </div>
         </div>
 
+        {/* View Mode Sub-tab Buttons */}
+        <div style={{ display: 'flex', background: 'var(--bg-primary)', padding: '0.3rem', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-color)', gap: '0.3rem', flexWrap: 'wrap', marginBottom: '1.25rem' }}>
+          <button
+            type="button"
+            onClick={() => setTableViewMode('new')}
+            style={{
+              padding: '0.45rem 0.85rem',
+              fontSize: '0.775rem',
+              fontWeight: tableViewMode === 'new' ? 700 : 500,
+              borderRadius: 'var(--radius-sm)',
+              border: 'none',
+              background: tableViewMode === 'new' ? '#3b82f6' : 'transparent',
+              color: tableViewMode === 'new' ? '#fff' : 'var(--text-secondary)',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.35rem'
+            }}
+          >
+            <Sparkles size={14} />
+            <span>Trạm Mới Nhập ({sessionNewList.length})</span>
+          </button>
+          
+          <button
+            type="button"
+            onClick={() => setTableViewMode('edited')}
+            style={{
+              padding: '0.45rem 0.85rem',
+              fontSize: '0.775rem',
+              fontWeight: tableViewMode === 'edited' ? 700 : 500,
+              borderRadius: 'var(--radius-sm)',
+              border: 'none',
+              background: tableViewMode === 'edited' ? '#8b5cf6' : 'transparent',
+              color: tableViewMode === 'edited' ? '#fff' : 'var(--text-secondary)',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.35rem'
+            }}
+          >
+            <Edit3 size={14} />
+            <span>Trạm Vừa Sửa ({sessionEditedList.length})</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setTableViewMode('chua_bao_cao')}
+            style={{
+              padding: '0.45rem 0.85rem',
+              fontSize: '0.775rem',
+              fontWeight: tableViewMode === 'chua_bao_cao' ? 700 : 500,
+              borderRadius: 'var(--radius-sm)',
+              border: 'none',
+              background: tableViewMode === 'chua_bao_cao' ? '#ef4444' : 'transparent',
+              color: tableViewMode === 'chua_bao_cao' ? '#fff' : 'var(--text-secondary)',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.35rem'
+            }}
+          >
+            <AlertCircle size={14} style={{ color: tableViewMode === 'chua_bao_cao' ? '#fff' : '#f87171' }} />
+            <span>🔴 Chưa Làm VB Báo Cáo ({chuaBaoCaoList.length})</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setTableViewMode('da_bao_cao_chua_duyet')}
+            style={{
+              padding: '0.45rem 0.85rem',
+              fontSize: '0.775rem',
+              fontWeight: tableViewMode === 'da_bao_cao_chua_duyet' ? 700 : 500,
+              borderRadius: 'var(--radius-sm)',
+              border: 'none',
+              background: tableViewMode === 'da_bao_cao_chua_duyet' ? '#0284c7' : 'transparent',
+              color: tableViewMode === 'da_bao_cao_chua_duyet' ? '#fff' : 'var(--text-secondary)',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.35rem'
+            }}
+          >
+            <Clock size={14} style={{ color: tableViewMode === 'da_bao_cao_chua_duyet' ? '#fff' : '#38bdf8' }} />
+            <span>🔵 Đã Báo Cáo (Chưa Duyệt) ({daBaoCaoChuaDuyetList.length})</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setTableViewMode('vtt_dong_y')}
+            style={{
+              padding: '0.45rem 0.85rem',
+              fontSize: '0.775rem',
+              fontWeight: tableViewMode === 'vtt_dong_y' ? 700 : 500,
+              borderRadius: 'var(--radius-sm)',
+              border: 'none',
+              background: tableViewMode === 'vtt_dong_y' ? '#10b981' : 'transparent',
+              color: tableViewMode === 'vtt_dong_y' ? '#fff' : 'var(--text-secondary)',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.35rem'
+            }}
+          >
+            <CheckCircle2 size={14} style={{ color: tableViewMode === 'vtt_dong_y' ? '#fff' : '#34d399' }} />
+            <span>🟢 VTT Đã Đồng Ý ({vttDongYList.length})</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setTableViewMode('all')}
+            style={{
+              padding: '0.45rem 0.85rem',
+              fontSize: '0.775rem',
+              fontWeight: tableViewMode === 'all' ? 700 : 500,
+              borderRadius: 'var(--radius-sm)',
+              border: 'none',
+              background: tableViewMode === 'all' ? '#f59e0b' : 'transparent',
+              color: tableViewMode === 'all' ? '#fff' : 'var(--text-secondary)',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.35rem'
+            }}
+          >
+            <List size={14} />
+            <span>📋 Tất Cả Trạm ({tangGiaList.length})</span>
+          </button>
+        </div>
+
         {/* Filter Input for Summary Table */}
         <div style={{ marginBottom: '1rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '1rem', flexWrap: 'wrap' }}>
           <input
@@ -1060,13 +1228,19 @@ export default function AddPriceIncreaseTab({ data, onSaveStation, isSaving }) {
                 ? "Lọc danh sách trạm mới nhập thêm..." 
                 : tableViewMode === 'edited' 
                 ? "Lọc danh sách trạm vừa chỉnh sửa..." 
+                : tableViewMode === 'chua_bao_cao'
+                ? "Lọc danh sách trạm chưa làm văn bản báo cáo..."
+                : tableViewMode === 'da_bao_cao_chua_duyet'
+                ? "Lọc danh sách trạm đã báo cáo nhưng VTT chưa duyệt..."
+                : tableViewMode === 'vtt_dong_y'
+                ? "Lọc danh sách trạm VTT đã đồng ý..."
                 : "Lọc tất cả danh sách trạm tăng giá..."
             }
             value={tableSearch}
             onChange={(e) => setTableSearch(e.target.value)}
             style={{
               width: '100%',
-              maxWidth: '400px',
+              maxWidth: '420px',
               padding: '0.5rem 0.85rem',
               fontSize: '0.85rem',
               borderRadius: 'var(--radius-md)',
@@ -1076,15 +1250,21 @@ export default function AddPriceIncreaseTab({ data, onSaveStation, isSaving }) {
             }}
           />
 
-          {tableViewMode === 'new' && sessionNewList.length > 0 && (
-            <span className="badge" style={{ background: 'rgba(59, 130, 246, 0.15)', color: '#60a5fa', border: '1px solid rgba(59, 130, 246, 0.3)', padding: '0.35rem 0.75rem', fontSize: '0.8rem' }}>
-              ✨ Có <strong>{sessionNewList.length} trạm mới nhập thêm</strong> trong phiên này.
+          {tableViewMode === 'chua_bao_cao' && (
+            <span className="badge" style={{ background: 'rgba(239, 68, 68, 0.15)', color: '#f87171', border: '1px solid rgba(239, 68, 68, 0.3)', padding: '0.35rem 0.75rem', fontSize: '0.8rem' }}>
+              🔴 Đang xem <strong>{chuaBaoCaoList.length} trạm chưa làm văn bản báo cáo</strong>.
             </span>
           )}
 
-          {tableViewMode === 'edited' && sessionEditedList.length > 0 && (
-            <span className="badge" style={{ background: 'rgba(139, 92, 246, 0.15)', color: '#c084fc', border: '1px solid rgba(139, 92, 246, 0.3)', padding: '0.35rem 0.75rem', fontSize: '0.8rem' }}>
-              ✏️ Có <strong>{sessionEditedList.length} trạm vừa chỉnh sửa</strong> thông tin.
+          {tableViewMode === 'da_bao_cao_chua_duyet' && (
+            <span className="badge" style={{ background: 'rgba(2, 132, 199, 0.15)', color: '#38bdf8', border: '1px solid rgba(2, 132, 199, 0.3)', padding: '0.35rem 0.75rem', fontSize: '0.8rem' }}>
+              🔵 Đang xem <strong>{daBaoCaoChuaDuyetList.length} trạm đã báo cáo nhưng VTT chưa duyệt</strong>.
+            </span>
+          )}
+
+          {tableViewMode === 'vtt_dong_y' && (
+            <span className="badge" style={{ background: 'rgba(16, 185, 129, 0.15)', color: '#34d399', border: '1px solid rgba(16, 185, 129, 0.3)', padding: '0.35rem 0.75rem', fontSize: '0.8rem' }}>
+              🟢 Đang xem <strong>{vttDongYList.length} trạm VTT đã đồng ý văn bản</strong>.
             </span>
           )}
         </div>
@@ -1122,7 +1302,7 @@ export default function AddPriceIncreaseTab({ data, onSaveStation, isSaving }) {
 
                   const statusVTT = st.baoCaoVTT || 'Chưa làm văn bản báo cáo';
                   const isDongY = statusVTT.toLowerCase().includes('đồng ý');
-                  const isDaLam = statusVTT === 'Đã làm văn bản báo cáo';
+                  const isDaLam = statusVTT.includes('Đã làm') || statusVTT.includes('báo cáo');
 
                   return (
                     <tr
@@ -1182,7 +1362,7 @@ export default function AddPriceIncreaseTab({ data, onSaveStation, isSaving }) {
                           </span>
                         ) : isDaLam ? (
                           <span className="badge" style={{ background: 'rgba(59, 130, 246, 0.2)', color: '#60a5fa', border: '1px solid rgba(59, 130, 246, 0.4)', padding: '0.25rem 0.5rem' }}>
-                            🔵 Đã làm văn bản báo cáo
+                            🔵 {statusVTT}
                           </span>
                         ) : (
                           <span className="badge" style={{ background: 'rgba(239, 68, 68, 0.15)', color: '#f87171', border: '1px solid rgba(239, 68, 68, 0.3)', padding: '0.25rem 0.5rem' }}>
@@ -1243,6 +1423,12 @@ export default function AddPriceIncreaseTab({ data, onSaveStation, isSaving }) {
                       ? 'Chưa có trạm nào được nhập mới thêm trong phiên này. Vui lòng chọn trạm phía trên để nhập mới!' 
                       : tableViewMode === 'edited'
                       ? 'Chưa có trạm nào được sửa thông tin trong phiên này.'
+                      : tableViewMode === 'chua_bao_cao'
+                      ? 'Không có trạm nào chưa làm văn bản báo cáo.'
+                      : tableViewMode === 'da_bao_cao_chua_duyet'
+                      ? 'Không có trạm nào đã báo cáo mà VTT chưa duyệt.'
+                      : tableViewMode === 'vtt_dong_y'
+                      ? 'Không có trạm nào VTT đã đồng ý.'
                       : 'Chưa có trạm nào được cập nhật tăng giá.'}
                   </td>
                 </tr>
