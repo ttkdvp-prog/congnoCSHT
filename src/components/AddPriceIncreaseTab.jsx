@@ -824,7 +824,7 @@ export default function AddPriceIncreaseTab({ data, onSaveStation, isSaving }) {
                   <input
                     type="text"
                     className="input-field"
-                    placeholder="Dán Link Drive/OneDrive để đồng bộ mượt nhất..."
+                    placeholder="Dán Link Drive/OneDrive/URL văn bản..."
                     value={fileDinhKem}
                     onChange={(e) => {
                       setFileDinhKem(e.target.value);

@@ -397,7 +397,7 @@ export default function App() {
       console.error('Error saving station data:', err);
       setToastMessage({ 
         type: 'success', 
-        text: `✅ Đã lưu và cập nhật dữ liệu trạm ${updatedStation.maCSHT} trên Web Dashboard! (Gợi ý: Dán Link Drive/OneDrive để đồng bộ file nặng mượt nhất).` 
+        text: `✅ Đã lưu và cập nhật dữ liệu trạm ${updatedStation.maCSHT} trên Web Dashboard! (Gợi ý: Dán Link Drive/OneDrive đối với các file nặng).` 
       });
       setEditingStation(null);
       setEditingPriceStation(null);
