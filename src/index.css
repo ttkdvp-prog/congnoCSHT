@@ -365,11 +365,20 @@ h1, h2, h3, h4, .brand-font {
 
   .sidebar-nav {
     flex-direction: row !important;
-    overflow-x: auto;
-    padding: 0.5rem !important;
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch;
+    padding: 0.6rem !important;
+    gap: 0.5rem !important;
+    white-space: nowrap !important;
   }
 
   .sidebar-nav button {
     width: auto !important;
+    flex-shrink: 0 !important;
+    white-space: nowrap !important;
+  }
+
+  .sidebar-nav span {
+    white-space: nowrap !important;
   }
 }

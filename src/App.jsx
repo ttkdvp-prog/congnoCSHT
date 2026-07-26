@@ -175,13 +175,13 @@ export default function App() {
   const [globalSessionNewKeys, setGlobalSessionNewKeys] = useState([]);
   const [globalSessionEditedKeys, setGlobalSessionEditedKeys] = useState([]);
 
-  // Load data from Google Apps Script if URL exists
-  const fetchDataFromGAS = async (url, isSilent = false) => {
-    if (!url) return;
+  // Load data from Google Apps Script with auto-fallback to DEFAULT_GAS_URL
+  const fetchDataFromGAS = async (targetUrl = apiUrl, isSilent = false) => {
+    const urlToUse = targetUrl || DEFAULT_GAS_URL;
     if (!isSilent) setIsLoading(true);
     try {
-      const endpoint = url + (url.includes('?') ? '&' : '?') + 'action=getData&_t=' + Date.now();
-      const res = await fetch(endpoint);
+      const endpoint = urlToUse + (urlToUse.includes('?') ? '&' : '?') + 'action=getData&_t=' + Date.now();
+      const res = await fetch(endpoint, { redirect: 'follow' });
       const result = await res.json();
       if (result && result.status === 'success' && Array.isArray(result.data) && result.data.length > 0) {
         setData(processStationRecords(result.data));
@@ -195,11 +195,19 @@ export default function App() {
         }
         setIsLive(true);
       } else {
-        setIsLive(false);
+        if (urlToUse !== DEFAULT_GAS_URL) {
+          fetchDataFromGAS(DEFAULT_GAS_URL, isSilent);
+        } else {
+          setIsLive(false);
+        }
       }
     } catch (err) {
-      console.warn('Cannot fetch from Apps Script API, using fallback local data.', err);
-      setIsLive(false);
+      console.warn('Cannot fetch from Apps Script API, retrying with default URL...', err);
+      if (urlToUse !== DEFAULT_GAS_URL) {
+        fetchDataFromGAS(DEFAULT_GAS_URL, isSilent);
+      } else {
+        setIsLive(false);
+      }
     } finally {
       if (!isSilent) setIsLoading(false);
     }

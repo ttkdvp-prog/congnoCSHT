@@ -114,9 +114,9 @@ export default function TabBar({ activeTab, onTabChange, counts }) {
               if (!isActive) e.currentTarget.style.background = 'transparent';
             }}
           >
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', minWidth: 0, flex: 1 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', minWidth: 0, flex: 1, whiteSpace: 'nowrap' }}>
               <Icon size={18} style={{ color: isActive ? tab.color : 'var(--text-muted)', flexShrink: 0 }} />
-              <span style={{ whiteSpace: 'normal', wordBreak: 'break-word', lineHeight: 1.35, textAlign: 'left' }}>{tab.label}</span>
+              <span style={{ whiteSpace: 'nowrap', textAlign: 'left' }}>{tab.label}</span>
             </div>
             {tab.badge && (
               <span 
