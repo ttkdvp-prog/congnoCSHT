@@ -363,13 +363,9 @@ export default function App() {
         return isMatch ? updatedStation : item;
       }));
 
-      // 2. Prepare payload for Google Apps Script (sanitize large Base64 files to avoid payload limits & NetworkError)
+      // 2. Prepare payload for Google Apps Script (automatic upload Base64 files to Drive)
       if (apiUrl) {
         const payloadStation = { ...updatedStation };
-        if (payloadStation.fileDinhKem && payloadStation.fileDinhKem.length > 1500) {
-          const name = updatedStation.fileName || 'File_van_ban';
-          payloadStation.fileDinhKem = `[File đính kèm local: ${name}]`;
-        }
 
         const res = await fetch(apiUrl, {
           method: 'POST',
@@ -381,7 +377,16 @@ export default function App() {
         });
         const resData = await res.json();
         if (resData && resData.status === 'success') {
-          setToastMessage({ type: 'success', text: `✅ Đã lưu và cập nhật trực tiếp về Hệ Thống cho trạm ${updatedStation.maCSHT}!` });
+          if (resData.fileUrl) {
+            updatedStation.fileDinhKem = resData.fileUrl;
+            setData(prevData => prevData.map(item => {
+              const isMatch = (updatedStation.rowIndex && item.rowIndex)
+                ? item.rowIndex === updatedStation.rowIndex
+                : item.maCSHT === updatedStation.maCSHT;
+              return isMatch ? { ...item, fileDinhKem: resData.fileUrl } : item;
+            }));
+          }
+          setToastMessage({ type: 'success', text: `✅ Đã lưu và đồng bộ đính kèm file về Hệ Thống cho trạm ${updatedStation.maCSHT}!` });
         } else {
           setToastMessage({ type: 'warning', text: `⚠️ Ứng dụng đã cập nhật giao diện nhưng Máy Chủ phản hồi: ${resData.message || 'Lỗi lưu'}` });
         }

@@ -367,18 +367,37 @@ function doPost(e) {
     updateFieldByPattern('đã thanh toán 2026', contents.daThanhToan2026Den313);
     updateFieldByPattern('ngày thanh toán', contents.ngayThanhToan);
 
+    // Process File Upload: If fileDinhKem is a Base64 string, upload to Google Drive automatically
+    var finalFileUrl = contents.fileDinhKem || '';
+    if (finalFileUrl && String(finalFileUrl).indexOf('data:') === 0) {
+      try {
+        var base64Parts = String(finalFileUrl).split(',');
+        var contentType = base64Parts[0].split(':')[1].split(';')[0];
+        var bytes = Utilities.base64Decode(base64Parts[1]);
+        var fName = contents.fileName || (maCSHT ? (maCSHT + '_van_ban.pdf') : 'van_ban_dinh_kem.pdf');
+        var blob = Utilities.newBlob(bytes, contentType, fName);
+        
+        var driveFile = DriveApp.createFile(blob);
+        driveFile.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
+        finalFileUrl = driveFile.getUrl();
+      } catch (fileErr) {
+        finalFileUrl = contents.fileName ? contents.fileName : finalFileUrl;
+      }
+    }
+
     updateFieldByPattern(['người thụ hưởng'], contents.nguoiThuHuong);
     updateFieldByPattern(['số tài khoản'], contents.soTaiKhoan);
     updateFieldByPattern(['tên ngân hàng'], contents.tenNganHang);
     updateFieldByPattern(['báo cáo vtt', 'báo cáo', 'vb báo cáo', 'vtt', 'tiến độ'], contents.baoCaoVTT);
     updateFieldByPattern(['địa chỉ đối tác', 'địa chỉ'], contents.diaChiDoiTac);
-    updateFieldByPattern(['file', 'file đính kèm', 'link văn bản', 'file báo cáo', 'link file', 'file văn bản'], contents.fileDinhKem);
+    updateFieldByPattern(['file', 'file đính kèm', 'link văn bản', 'file báo cáo', 'link file', 'file văn bản'], finalFileUrl);
     updateFieldByPattern(['ghi chú'], contents.ghiChu);
 
     return jsonResponse({
       status: 'success',
       message: 'Đã cập nhật dữ liệu thành công lên Google Sheet cho trạm ' + (maCSHT || targetRow),
-      updatedRow: targetRow
+      updatedRow: targetRow,
+      fileUrl: finalFileUrl
     });
 
   } catch (err) {
