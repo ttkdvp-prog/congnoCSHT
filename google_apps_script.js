@@ -557,17 +557,17 @@ function doPost(e) {
     // Save session keys for cross-device synchronization (PC <-> Mobile)
     try {
       var scriptProps = PropertiesService.getScriptProperties();
-      var keyStr = String(maCSHT || '').trim();
+      var keyStr = String(maCSHT || '').trim().toLowerCase();
       if (keyStr) {
         if (contents.isNewlyAdded) {
           var currNew = JSON.parse(scriptProps.getProperty('csht_session_new_keys') || '[]');
-          if (currNew.indexOf(keyStr) === -1) {
+          if (currNew.map(function(k){ return String(k).trim().toLowerCase(); }).indexOf(keyStr) === -1) {
             currNew.push(keyStr);
             scriptProps.setProperty('csht_session_new_keys', JSON.stringify(currNew));
           }
         } else {
           var currEdited = JSON.parse(scriptProps.getProperty('csht_session_edited_keys') || '[]');
-          if (currEdited.indexOf(keyStr) === -1) {
+          if (currEdited.map(function(k){ return String(k).trim().toLowerCase(); }).indexOf(keyStr) === -1) {
             currEdited.push(keyStr);
             scriptProps.setProperty('csht_session_edited_keys', JSON.stringify(currEdited));
           }

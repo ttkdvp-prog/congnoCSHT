@@ -234,10 +234,12 @@ export default function AddPriceIncreaseTab({ data, onSaveStation, isSaving, ser
     return parseFloat(cleanStr) || 0;
   };
 
-  // Helper to get unique station key
+  // Helper to get unique station key (always uses normalized maCSHT if present)
   const getStationKey = (st) => {
     if (!st) return '';
-    return st.rowIndex ? `row_${st.rowIndex}` : `ma_${st.maCSHT}`;
+    const code = st.maCSHT || st.ma || '';
+    if (code) return String(code).trim().toLowerCase();
+    return st.rowIndex ? `row_${st.rowIndex}` : '';
   };
 
   // Filter stations based on search term
@@ -397,27 +399,23 @@ export default function AddPriceIncreaseTab({ data, onSaveStation, isSaving, ser
     return tangGiaList.filter(st => st.baoCaoVTT && st.baoCaoVTT.toLowerCase().includes('đồng ý'));
   }, [tangGiaList]);
 
-  // Newly Added Stations List (Any price increase station beyond baseline 137, or explicitly added in session)
+  // Newly Added Stations List (Matches any station explicitly added/entered as new station)
   const sessionNewList = useMemo(() => {
     const normNewKeys = sessionNewKeys.map(k => String(k).trim().toLowerCase());
     return tangGiaList.filter(st => {
       const k = getStationKey(st);
       if (!k) return false;
-      if (normNewKeys.includes(k) || st.isNewStation || st.addedInSession || st.isNewlyAdded) return true;
-      if (initialBaselineKeys.length > 0 && !initialBaselineKeys.includes(k)) return true;
-      return false;
+      return normNewKeys.includes(k) || st.isNewlyAdded === true || st.isNewStation === true;
     });
-  }, [tangGiaList, sessionNewKeys, initialBaselineKeys]);
+  }, [tangGiaList, sessionNewKeys]);
 
-  // Edited Existing Stations List (Any price increase station modified/edited in session)
+  // Edited Existing Stations List (Matches any station explicitly modified/edited)
   const sessionEditedList = useMemo(() => {
     const normEditedKeys = sessionEditedKeys.map(k => String(k).trim().toLowerCase());
     return tangGiaList.filter(st => {
       const k = getStationKey(st);
       if (!k) return false;
-      if (normEditedKeys.includes(k)) return true;
-      if (st.isEdited || st.isEditedStation || st.lastEditedAt) return true;
-      return false;
+      return normEditedKeys.includes(k) || (st.isEdited === true && !st.isNewlyAdded);
     });
   }, [tangGiaList, sessionEditedKeys]);
 

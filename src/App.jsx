@@ -401,12 +401,29 @@ export default function App() {
   const handleSaveStation = async (updatedStation) => {
     setIsSaving(true);
     try {
-      // 1. Update local state immediately (match by rowIndex if available, otherwise maCSHT)
-      setData(prev => prev.map(item => {
+      // Update local memory
+      const stKey = String(updatedStation.maCSHT || '').trim().toLowerCase();
+      if (stKey) {
+        if (updatedStation.isNewlyAdded) {
+          setGlobalSessionNewKeys(prev => {
+            const next = Array.from(new Set([...prev, stKey]));
+            try { localStorage.setItem('csht_session_new_keys', JSON.stringify(next)); } catch(e){}
+            return next;
+          });
+        } else {
+          setGlobalSessionEditedKeys(prev => {
+            const next = Array.from(new Set([...prev, stKey]));
+            try { localStorage.setItem('csht_session_edited_keys', JSON.stringify(next)); } catch(e){}
+            return next;
+          });
+        }
+      }
+
+      setData(prevData => prevData.map(item => {
         const isMatch = (updatedStation.rowIndex && item.rowIndex)
           ? item.rowIndex === updatedStation.rowIndex
           : item.maCSHT === updatedStation.maCSHT;
-        return isMatch ? updatedStation : item;
+        return isMatch ? { ...item, ...updatedStation, isEdited: !updatedStation.isNewlyAdded } : item;
       }));
 
       // 2. Prepare payload for Google Apps Script (automatic upload Base64 files to Drive)
