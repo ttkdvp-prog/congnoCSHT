@@ -1,8 +1,32 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { Search, PlusCircle, Save, Flame, Building, MapPin, DollarSign, Calendar, Edit3, X, AlertCircle, Sparkles, List, Trash2, FileText, User, Paperclip, Upload, ExternalLink, FileCheck, Download, CheckCircle2, Clock } from 'lucide-react';
 import * as XLSX from 'xlsx';
+import rawFallbackData from '../data/csht_data.json';
 
 export default function AddPriceIncreaseTab({ data, onSaveStation, isSaving, serverSessionNewKeys = [], serverSessionEditedKeys = [] }) {
+  // Baseline initial 137 price increase station keys
+  const initialBaselineKeys = useMemo(() => {
+    try {
+      const set = new Set();
+      rawFallbackData.forEach(item => {
+        const donGiaCu = Number(item.donGia2025) || 0;
+        const donGiaMoi = Math.max(
+          Number(item.deXuatT5) || 0,
+          Number(item.deXuatT6) || 0,
+          Number(item.deXuatT7) || 0,
+          Number(item.donGia2026) || 0
+        );
+        const rawChenh = Number(item.chenhLechDonGia) || 0;
+        const chenh = (donGiaMoi > donGiaCu && donGiaCu > 0) ? (donGiaMoi - donGiaCu) : rawChenh;
+        if (chenh > 0 && item.maCSHT) {
+          set.add(String(item.maCSHT).trim().toLowerCase());
+        }
+      });
+      return Array.from(set);
+    } catch (e) {
+      return [];
+    }
+  }, []);
   const [searchTerm, setSearchTerm] = useState('');
   const [showDropdown, setShowDropdown] = useState(false);
   const [selectedStation, setSelectedStation] = useState(null);
@@ -373,15 +397,29 @@ export default function AddPriceIncreaseTab({ data, onSaveStation, isSaving, ser
     return tangGiaList.filter(st => st.baoCaoVTT && st.baoCaoVTT.toLowerCase().includes('đồng ý'));
   }, [tangGiaList]);
 
-  // Newly Added Stations List in this Session
+  // Newly Added Stations List (Any price increase station beyond baseline 137, or explicitly added in session)
   const sessionNewList = useMemo(() => {
-    return data.filter(st => sessionNewKeys.includes(getStationKey(st)));
-  }, [data, sessionNewKeys]);
+    const normNewKeys = sessionNewKeys.map(k => String(k).trim().toLowerCase());
+    return tangGiaList.filter(st => {
+      const k = getStationKey(st);
+      if (!k) return false;
+      if (normNewKeys.includes(k) || st.isNewStation || st.addedInSession || st.isNewlyAdded) return true;
+      if (initialBaselineKeys.length > 0 && !initialBaselineKeys.includes(k)) return true;
+      return false;
+    });
+  }, [tangGiaList, sessionNewKeys, initialBaselineKeys]);
 
-  // Edited Existing Stations List in this Session
+  // Edited Existing Stations List (Any price increase station modified/edited in session)
   const sessionEditedList = useMemo(() => {
-    return data.filter(st => sessionEditedKeys.includes(getStationKey(st)));
-  }, [data, sessionEditedKeys]);
+    const normEditedKeys = sessionEditedKeys.map(k => String(k).trim().toLowerCase());
+    return tangGiaList.filter(st => {
+      const k = getStationKey(st);
+      if (!k) return false;
+      if (normEditedKeys.includes(k)) return true;
+      if (st.isEdited || st.isEditedStation || st.lastEditedAt) return true;
+      return false;
+    });
+  }, [tangGiaList, sessionEditedKeys]);
 
   // Active list based on view mode ('new' | 'edited' | 'chua_bao_cao' | 'da_bao_cao_chua_duyet' | 'vtt_dong_y' | 'all')
   // Automatically sorted by Tăng / Tháng (chenhLechDonGia) from HIGHEST to LOWEST
