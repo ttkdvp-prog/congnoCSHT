@@ -88,6 +88,7 @@ export default function DataTable({ data, onViewDetail, onEditPrice }) {
               <th onClick={() => handleSort('donGia2026')} style={{ cursor: 'pointer', textAlign: 'right' }}>ĐƠN GIÁ 2026 / MỚI</th>
               <th onClick={() => handleSort('chenhLechDonGia')} style={{ cursor: 'pointer', textAlign: 'right' }}>TĂNG GIÁ</th>
               <th onClick={() => handleSort('thoiDiemTangGia')} style={{ cursor: 'pointer' }}>THỜI ĐIỂM TĂNG</th>
+              <th onClick={() => handleSort('baoCaoVTT')} style={{ cursor: 'pointer' }}>BÁO CÁO VTT</th>
               <th onClick={() => handleSort('no2025Ton')} style={{ cursor: 'pointer', textAlign: 'right' }}>NỢ TỒN 2025</th>
               <th onClick={() => handleSort('daThanhToan2026Den313')} style={{ cursor: 'pointer', textAlign: 'right' }}>ĐÃ TT 2026</th>
               <th onClick={() => handleSort('soThangNo2026')} style={{ cursor: 'pointer', textAlign: 'center' }}>SỐ THÁNG NỢ 2026</th>
@@ -137,6 +138,17 @@ export default function DataTable({ data, onViewDetail, onEditPrice }) {
                       <span className="badge badge-blue">{row.thoiDiemTangGia}</span>
                     ) : row.isTangGia ? (
                       <span className="badge badge-amber">Chưa xác định</span>
+                    ) : (
+                      <span style={{ color: 'var(--text-muted)' }}>-</span>
+                    )}
+                  </td>
+                  <td style={{ fontSize: '0.75rem', maxWidth: '180px', whiteSpace: 'normal', wordBreak: 'break-word' }}>
+                    {row.baoCaoVTT?.includes('đồng ý') || row.baoCaoVTT?.includes('Đồng ý') ? (
+                      <span className="badge badge-emerald" style={{ fontSize: '0.7rem' }}>🟢 {row.baoCaoVTT}</span>
+                    ) : row.baoCaoVTT === 'Đã làm văn bản báo cáo' ? (
+                      <span className="badge badge-blue" style={{ fontSize: '0.7rem' }}>🔵 Đã làm VB</span>
+                    ) : row.isTangGia ? (
+                      <span className="badge badge-rose" style={{ fontSize: '0.7rem' }}>🔴 {row.baoCaoVTT || 'Chưa làm VB'}</span>
                     ) : (
                       <span style={{ color: 'var(--text-muted)' }}>-</span>
                     )}

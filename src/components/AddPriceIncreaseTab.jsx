@@ -1,21 +1,22 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { Search, PlusCircle, Save, Flame, Building, MapPin, DollarSign, Calendar, Edit3, X, AlertCircle, Sparkles, List, Trash2 } from 'lucide-react';
+import { Search, PlusCircle, Save, Flame, Building, MapPin, DollarSign, Calendar, Edit3, X, AlertCircle, Sparkles, List, Trash2, FileText } from 'lucide-react';
 
 export default function AddPriceIncreaseTab({ data, onSaveStation, isSaving }) {
   const [searchTerm, setSearchTerm] = useState('');
   const [showDropdown, setShowDropdown] = useState(false);
   const [selectedStation, setSelectedStation] = useState(null);
 
-  // Form State - thoiDiem & lyDo start blank per user request
+  // Form State
   const [donGiaMoi, setDonGiaMoi] = useState('');
   const [thoiDiem, setThoiDiem] = useState('');
   const [lyDo, setLyDo] = useState('');
+  const [baoCaoVTT, setBaoCaoVTT] = useState('Chưa làm văn bản báo cáo');
   const [tableSearch, setTableSearch] = useState('');
 
   // Session-level updated stations (unique key: rowIndex or maCSHT_rowIndex)
   const [sessionUpdatedKeys, setSessionUpdatedKeys] = useState(() => {
     try {
-      localStorage.removeItem('csht_session_updated_codes'); // clear legacy bugged keys
+      localStorage.removeItem('csht_session_updated_codes');
       const saved = localStorage.getItem('csht_session_updated_keys_v2');
       return saved ? JSON.parse(saved) : [];
     } catch (e) {
@@ -45,7 +46,7 @@ export default function AddPriceIncreaseTab({ data, onSaveStation, isSaving }) {
     if (val === null || val === undefined || val === '') return '';
     const digitsOnly = String(val).replace(/\D/g, '');
     if (!digitsOnly) return '';
-    return Number(digitsOnly).toLocaleString('de-DE'); // e.g. 2.240.000
+    return Number(digitsOnly).toLocaleString('de-DE');
   };
 
   const parseNumberFromDots = (val) => {
@@ -82,9 +83,9 @@ export default function AddPriceIncreaseTab({ data, onSaveStation, isSaving }) {
     const initialMoi = station.deXuatT7 > 0 ? station.deXuatT7 : (station.donGia2026 > 0 ? station.donGia2026 : station.donGia2025);
     setDonGiaMoi(initialMoi ? formatNumberWithDots(initialMoi) : '');
 
-    // User requirement: Do NOT retain previous values; fill existing station value or keep BLANK
     setThoiDiem(station.thoiDiemTangGia || '');
     setLyDo(station.ghiChu || '');
+    setBaoCaoVTT(station.baoCaoVTT || 'Chưa làm văn bản báo cáo');
   };
 
   const handleClearSelection = () => {
@@ -93,6 +94,7 @@ export default function AddPriceIncreaseTab({ data, onSaveStation, isSaving }) {
     setDonGiaMoi('');
     setThoiDiem('');
     setLyDo('');
+    setBaoCaoVTT('Chưa làm văn bản báo cáo');
   };
 
   // Clear Session List
@@ -124,7 +126,8 @@ export default function AddPriceIncreaseTab({ data, onSaveStation, isSaving }) {
       chenhLechDonGia: chenhLech,
       isTangGia: chenhLech > 0 || numDonGiaMoi > donGiaCu,
       thoiDiemTangGia: thoiDiem.trim(),
-      ghiChu: lyDo.trim()
+      ghiChu: lyDo.trim(),
+      baoCaoVTT: baoCaoVTT.trim() || 'Chưa làm văn bản báo cáo'
     };
 
     // Record unique key in session list
@@ -135,7 +138,7 @@ export default function AddPriceIncreaseTab({ data, onSaveStation, isSaving }) {
         }
         return prev;
       });
-      setTableViewMode('session'); // Auto-switch view mode to session list
+      setTableViewMode('session');
     }
 
     onSaveStation(updatedStation);
@@ -163,13 +166,13 @@ export default function AddPriceIncreaseTab({ data, onSaveStation, isSaving }) {
       st.maCSHT?.toLowerCase().includes(q) ||
       st.tenCSHT?.toLowerCase().includes(q) ||
       st.site?.toLowerCase().includes(q) ||
-      st.toHaTang?.toLowerCase().includes(q)
+      st.toHaTang?.toLowerCase().includes(q) ||
+      st.baoCaoVTT?.toLowerCase().includes(q)
     );
   }, [tableViewMode, sessionList, tangGiaList, tableSearch]);
 
   // Statistics
   const totalChenhLechMonth = activeDisplayList.reduce((sum, item) => sum + (item.chenhLechDonGia || 0), 0);
-  const totalChenhLechYear = totalChenhLechMonth * 12;
 
   const formatVND = (val) => {
     if (!val && val !== 0) return '0 ₫';
@@ -190,7 +193,7 @@ export default function AddPriceIncreaseTab({ data, onSaveStation, isSaving }) {
               NHẬP & CẬP NHẬT TRẠM TĂNG GIÁ CSHT
             </h2>
             <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
-              Tìm kiếm trạm theo Mã CSHT / Tên trạm, tự nhập thông tin tăng giá (thời điểm và đơn giá mới), hệ thống sẽ tự động đồng bộ sang Google Sheet và lên báo cáo toàn bộ Dashboard.
+              Tìm kiếm trạm theo Mã CSHT / Tên trạm, nhập đơn giá mới, tiến độ báo cáo VTT và thời điểm tăng giá, tự động đồng bộ sang Google Sheet.
             </p>
           </div>
         </div>
@@ -324,7 +327,7 @@ export default function AddPriceIncreaseTab({ data, onSaveStation, isSaving }) {
 
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
                 <MapPin size={14} style={{ color: '#ec4899' }} />
-                <span>Chủ HĐ / Địa chỉ: <strong>{selectedStation.chuHopDong || '---'}</strong></span>
+                <span>Chủ HĐ / Đ.Chỉ: <strong>{selectedStation.diaChiDoiTac || selectedStation.chuHopDong || '---'}</strong></span>
               </div>
 
               <div style={{
@@ -359,12 +362,12 @@ export default function AddPriceIncreaseTab({ data, onSaveStation, isSaving }) {
         <div className="glass-panel" style={{ padding: '1.25rem' }}>
           <h3 style={{ fontSize: '1rem', fontWeight: 700, color: '#fbbf24', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
             <Edit3 size={18} />
-            2. Thông Tin Đề Xuất Tăng Giá
+            2. Thông Tin Đề Xuất Tăng Giá & Báo Cáo VTT
           </h3>
 
           <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
             
-            {/* Input Đơn giá mới (Đề xuất tăng giá) with Thousand Separator formatting */}
+            {/* Input Đơn giá mới (Đề xuất tăng giá) */}
             <div>
               <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '0.35rem' }}>
                 Đơn giá mới (Đề xuất tăng giá) [VND/tháng]:
@@ -419,7 +422,87 @@ export default function AddPriceIncreaseTab({ data, onSaveStation, isSaving }) {
               </div>
             )}
 
-            {/* Input Thời điểm tăng giá - Blank by default */}
+            {/* Input Báo cáo VTT (Tiến độ báo cáo Viễn Thông Tỉnh) */}
+            <div>
+              <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '0.35rem' }}>
+                Tiến độ Báo cáo VTT:
+              </label>
+              
+              {/* Quick Select Preset Buttons */}
+              <div style={{ display: 'flex', gap: '0.4rem', marginBottom: '0.4rem', flexWrap: 'wrap' }}>
+                <button
+                  type="button"
+                  onClick={() => setBaoCaoVTT('Chưa làm văn bản báo cáo')}
+                  disabled={!selectedStation}
+                  style={{
+                    padding: '0.25rem 0.55rem',
+                    fontSize: '0.725rem',
+                    borderRadius: '6px',
+                    cursor: 'pointer',
+                    background: baoCaoVTT === 'Chưa làm văn bản báo cáo' ? 'rgba(239, 68, 68, 0.25)' : 'rgba(255, 255, 255, 0.05)',
+                    border: baoCaoVTT === 'Chưa làm văn bản báo cáo' ? '1px solid #ef4444' : '1px solid var(--border-color)',
+                    color: baoCaoVTT === 'Chưa làm văn bản báo cáo' ? '#f87171' : 'var(--text-secondary)'
+                  }}
+                >
+                  🔴 Chưa làm VB báo cáo
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setBaoCaoVTT('Đã làm văn bản báo cáo')}
+                  disabled={!selectedStation}
+                  style={{
+                    padding: '0.25rem 0.55rem',
+                    fontSize: '0.725rem',
+                    borderRadius: '6px',
+                    cursor: 'pointer',
+                    background: baoCaoVTT === 'Đã làm văn bản báo cáo' ? 'rgba(59, 130, 246, 0.25)' : 'rgba(255, 255, 255, 0.05)',
+                    border: baoCaoVTT === 'Đã làm văn bản báo cáo' ? '1px solid #3b82f6' : '1px solid var(--border-color)',
+                    color: baoCaoVTT === 'Đã làm văn bản báo cáo' ? '#60a5fa' : 'var(--text-secondary)'
+                  }}
+                >
+                  🔵 Đã làm VB báo cáo
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setBaoCaoVTT('VTT đồng ý theo văn bản số ')}
+                  disabled={!selectedStation}
+                  style={{
+                    padding: '0.25rem 0.55rem',
+                    fontSize: '0.725rem',
+                    borderRadius: '6px',
+                    cursor: 'pointer',
+                    background: baoCaoVTT.includes('VTT đồng ý') ? 'rgba(16, 185, 129, 0.25)' : 'rgba(255, 255, 255, 0.05)',
+                    border: baoCaoVTT.includes('VTT đồng ý') ? '1px solid #10b981' : '1px solid var(--border-color)',
+                    color: baoCaoVTT.includes('VTT đồng ý') ? '#34d399' : 'var(--text-secondary)'
+                  }}
+                >
+                  🟢 VTT đồng ý theo VB...
+                </button>
+              </div>
+
+              <div style={{ position: 'relative' }}>
+                <input
+                  type="text"
+                  className="input-field"
+                  placeholder="Chưa làm văn bản báo cáo"
+                  value={baoCaoVTT}
+                  onChange={(e) => setBaoCaoVTT(e.target.value)}
+                  disabled={!selectedStation}
+                  style={{
+                    width: '100%',
+                    padding: '0.65rem 1rem 0.65rem 2.2rem',
+                    fontSize: '0.85rem',
+                    borderRadius: 'var(--radius-md)',
+                    background: 'var(--bg-primary)',
+                    border: '1px solid var(--border-color)',
+                    color: 'var(--text-main)'
+                  }}
+                />
+                <FileText size={16} style={{ position: 'absolute', left: '0.75rem', top: '50%', transform: 'translateY(-50%)', color: '#60a5fa' }} />
+              </div>
+            </div>
+
+            {/* Input Thời điểm tăng giá */}
             <div>
               <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '0.35rem' }}>
                 Thời điểm tăng giá:
@@ -434,8 +517,8 @@ export default function AddPriceIncreaseTab({ data, onSaveStation, isSaving }) {
                   disabled={!selectedStation}
                   style={{
                     width: '100%',
-                    padding: '0.7rem 1rem 0.7rem 2.2rem',
-                    fontSize: '0.875rem',
+                    padding: '0.65rem 1rem 0.65rem 2.2rem',
+                    fontSize: '0.85rem',
                     borderRadius: 'var(--radius-md)',
                     background: 'var(--bg-primary)',
                     border: '1px solid var(--border-color)',
@@ -446,7 +529,7 @@ export default function AddPriceIncreaseTab({ data, onSaveStation, isSaving }) {
               </div>
             </div>
 
-            {/* Input Lý do tăng giá / Ghi chú - Blank by default */}
+            {/* Input Lý do tăng giá / Ghi chú */}
             <div>
               <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '0.35rem' }}>
                 Lý do tăng giá / Ghi chú bổ sung:
@@ -512,7 +595,7 @@ export default function AddPriceIncreaseTab({ data, onSaveStation, isSaving }) {
               </h3>
             </div>
             <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
-              Chế độ xem phân loại giúp theo dõi chính xác các trạm vừa cập nhật mà không bị nhầm lẫn với các trạm trước đó.
+              Chế độ xem phân loại giúp theo dõi chính xác tiến độ Báo cáo VTT và các trạm vừa cập nhật.
             </p>
           </div>
 
@@ -625,6 +708,7 @@ export default function AddPriceIncreaseTab({ data, onSaveStation, isSaving }) {
                 <th style={{ padding: '0.75rem', textAlign: 'right' }}>Giá Mới (Tăng Giá)</th>
                 <th style={{ padding: '0.75rem', textAlign: 'right' }}>Tăng / Tháng</th>
                 <th style={{ padding: '0.75rem', textAlign: 'center' }}>Thời Điểm Tăng</th>
+                <th style={{ padding: '0.75rem' }}>Báo Cáo VTT</th>
                 <th style={{ padding: '0.75rem' }}>Lý Do / Ghi Chú</th>
                 <th style={{ padding: '0.75rem', textAlign: 'center' }}>Thao Tác</th>
               </tr>
@@ -637,6 +721,10 @@ export default function AddPriceIncreaseTab({ data, onSaveStation, isSaving }) {
                   const donGiaMoi = st.deXuatT7 > 0 ? st.deXuatT7 : (st.donGia2026 || donGiaCu);
                   const diff = st.chenhLechDonGia || Math.max(0, donGiaMoi - donGiaCu);
                   const isNewlyAdded = sessionUpdatedKeys.includes(stKey);
+
+                  const statusVTT = st.baoCaoVTT || 'Chưa làm văn bản báo cáo';
+                  const isDongY = statusVTT.toLowerCase().includes('đồng ý');
+                  const isDaLam = statusVTT === 'Đã làm văn bản báo cáo';
 
                   return (
                     <tr
@@ -674,12 +762,30 @@ export default function AddPriceIncreaseTab({ data, onSaveStation, isSaving }) {
                           <span style={{ color: 'var(--text-muted)' }}>---</span>
                         )}
                       </td>
+
+                      {/* BÁO CÁO VTT CELL */}
+                      <td style={{ padding: '0.6rem', fontSize: '0.8rem', minWidth: '180px', maxWidth: '280px', whiteSpace: 'normal', wordBreak: 'break-word' }}>
+                        {isDongY ? (
+                          <span className="badge" style={{ background: 'rgba(16, 185, 129, 0.2)', color: '#34d399', border: '1px solid rgba(16, 185, 129, 0.4)', padding: '0.25rem 0.5rem' }}>
+                            🟢 {statusVTT}
+                          </span>
+                        ) : isDaLam ? (
+                          <span className="badge" style={{ background: 'rgba(59, 130, 246, 0.2)', color: '#60a5fa', border: '1px solid rgba(59, 130, 246, 0.4)', padding: '0.25rem 0.5rem' }}>
+                            🔵 Đã làm văn bản báo cáo
+                          </span>
+                        ) : (
+                          <span className="badge" style={{ background: 'rgba(239, 68, 68, 0.15)', color: '#f87171', border: '1px solid rgba(239, 68, 68, 0.3)', padding: '0.25rem 0.5rem' }}>
+                            🔴 {statusVTT}
+                          </span>
+                        )}
+                      </td>
+
                       <td style={{
                         padding: '0.6rem',
                         color: 'var(--text-secondary)',
                         fontSize: '0.8rem',
-                        minWidth: '220px',
-                        maxWidth: '350px',
+                        minWidth: '200px',
+                        maxWidth: '300px',
                         whiteSpace: 'normal',
                         wordBreak: 'break-word',
                         lineHeight: 1.4
@@ -702,7 +808,7 @@ export default function AddPriceIncreaseTab({ data, onSaveStation, isSaving }) {
                 })
               ) : (
                 <tr>
-                  <td colSpan="11" style={{ textAlign: 'center', padding: '2.5rem', color: 'var(--text-muted)' }}>
+                  <td colSpan="12" style={{ textAlign: 'center', padding: '2.5rem', color: 'var(--text-muted)' }}>
                     {tableViewMode === 'session' 
                       ? 'Chưa có trạm nào được nhập mới trong phiên hôm nay. Vui lòng chọn trạm phía trên để bắt đầu nhập!' 
                       : 'Chưa có trạm nào được cập nhật tăng giá.'}

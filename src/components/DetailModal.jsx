@@ -84,6 +84,7 @@ export default function DetailModal({ station, isOpen, onClose }) {
               <div><strong style={{ color: '#fbbf24' }}>Đơn giá mới 2026 (chưa VAT):</strong> {formatMoney(station.donGia2026)}</div>
               <div><strong style={{ color: '#fbbf24' }}>Mức Tăng/Chênh Lệch:</strong> +{formatMoney(station.chenhLechDonGia)}</div>
               <div><strong style={{ color: 'var(--text-secondary)' }}>Thời Điểm Tăng:</strong> {station.thoiDiemTangGia || '-'}</div>
+              <div><strong style={{ color: '#60a5fa' }}>Báo Cáo VTT:</strong> {station.baoCaoVTT || 'Chưa làm văn bản báo cáo'}</div>
               <div style={{ gridColumn: '1 / -1' }}><strong style={{ color: 'var(--text-secondary)' }}>Ghi chú:</strong> {station.ghiChu || '-'}</div>
             </div>
           </div>

@@ -12,6 +12,7 @@ export default function EditPriceModal({ station, isOpen, onClose, onSave, isSav
     deXuatT6: station.deXuatT6 || 0,
     deXuatT7: station.deXuatT7 || 0,
     thoiDiemTangGia: station.thoiDiemTangGia || '',
+    baoCaoVTT: station.baoCaoVTT || 'Chưa làm văn bản báo cáo',
     ghiChu: station.ghiChu || ''
   });
 
@@ -25,6 +26,7 @@ export default function EditPriceModal({ station, isOpen, onClose, onSave, isSav
         deXuatT6: station.deXuatT6 || 0,
         deXuatT7: station.deXuatT7 || 0,
         thoiDiemTangGia: station.thoiDiemTangGia || '',
+        baoCaoVTT: station.baoCaoVTT || 'Chưa làm văn bản báo cáo',
         ghiChu: station.ghiChu || ''
       });
     }
@@ -174,6 +176,20 @@ export default function EditPriceModal({ station, isOpen, onClose, onSave, isSav
               value={formData.thoiDiemTangGia}
               onChange={(e) => setFormData(p => ({ ...p, thoiDiemTangGia: e.target.value }))}
               placeholder="Nhập thời điểm áp dụng..."
+            />
+          </div>
+
+          {/* Báo cáo VTT */}
+          <div style={{ marginBottom: '1rem' }}>
+            <label style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-secondary)', display: 'block', marginBottom: '0.35rem' }}>
+              Tiến độ Báo cáo VTT:
+            </label>
+            <input
+              type="text"
+              className="input-control"
+              value={formData.baoCaoVTT}
+              onChange={(e) => setFormData(p => ({ ...p, baoCaoVTT: e.target.value }))}
+              placeholder="Chưa làm văn bản báo cáo / Đã làm văn bản báo cáo / VTT đồng ý..."
             />
           </div>
 

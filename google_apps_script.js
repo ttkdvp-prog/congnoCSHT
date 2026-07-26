@@ -98,6 +98,8 @@ function doGet(e) {
     const idxPhapLy = findColIdx('tình trạng pháp lý');
     const idxNgayThanhToan = findColIdx('ngày thanh toán');
     const idxDaThanhToan2026 = findColIdx('đã thanh toán 2026');
+    const idxBaoCaoVTT = findColIdx('báo cáo vtt');
+    const idxDiaChiDoiTac = findColIdx('địa chỉ đối tác');
     const idxGhiChu = findColIdx('ghi chú');
 
     const records = [];
@@ -180,6 +182,9 @@ function doGet(e) {
       const ngayThanhToan = formatDate(row[idxNgayThanhToan]);
       const daThanhToan2026Den313Raw = parseVnNumber(row[idxDaThanhToan2026]);
       const daThanhToan2026Den313 = daThanhToan2026Den313Raw > 0 ? daThanhToan2026Den313Raw : sumMonthlyPayments2026;
+      const rawBaoCaoVTT = String(row[idxBaoCaoVTT] || '').trim();
+      const baoCaoVTT = rawBaoCaoVTT || (isTangGia ? 'Chưa làm văn bản báo cáo' : '');
+      const diaChiDoiTac = String(row[idxDiaChiDoiTac] || '').trim();
       const ghiChu = String(row[idxGhiChu] || '').trim();
 
       let thangDaTT2026 = countMonthsPaid2026;
@@ -233,6 +238,8 @@ function doGet(e) {
         tinhTrangPhapLy: tinhTrangPhapLy,
         ngayThanhToan: ngayThanhToan,
         isDaThanhToan: isDaThanhToan,
+        baoCaoVTT: baoCaoVTT,
+        diaChiDoiTac: diaChiDoiTac,
         ghiChu: ghiChu
       });
     }
@@ -343,10 +350,12 @@ function doPost(e) {
     updateFieldByPattern('đã thanh toán 2026', contents.daThanhToan2026Den313);
     updateFieldByPattern('ngày thanh toán', contents.ngayThanhToan);
 
-    updateFieldByPattern('người thụ hưởng', contents.nguoiThuHuong);
-    updateFieldByPattern('số tài khoản', contents.soTaiKhoan);
-    updateFieldByPattern('tên ngân hàng', contents.tenNganHang);
-    updateFieldByPattern('ghi chú', contents.ghiChu);
+    updateFieldByPattern(['người thụ hưởng'], contents.nguoiThuHuong);
+    updateFieldByPattern(['số tài khoản'], contents.soTaiKhoan);
+    updateFieldByPattern(['tên ngân hàng'], contents.tenNganHang);
+    updateFieldByPattern(['báo cáo vtt', 'báo cáo'], contents.baoCaoVTT);
+    updateFieldByPattern(['địa chỉ đối tác', 'địa chỉ'], contents.diaChiDoiTac);
+    updateFieldByPattern(['ghi chú'], contents.ghiChu);
 
     return jsonResponse({
       status: 'success',
