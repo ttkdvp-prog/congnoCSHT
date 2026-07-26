@@ -26,23 +26,37 @@ export default function AddPriceIncreaseTab({ data, onSaveStation, isSaving }) {
     }
   });
 
-  // Session-level updated stations (unique key: rowIndex or maCSHT_rowIndex)
-  const [sessionUpdatedKeys, setSessionUpdatedKeys] = useState(() => {
+  // Track Newly Added Stations vs Edited Existing Stations separately
+  const [sessionNewKeys, setSessionNewKeys] = useState(() => {
     try {
-      localStorage.removeItem('csht_session_updated_codes');
-      const saved = localStorage.getItem('csht_session_updated_keys_v2');
+      const saved = localStorage.getItem('csht_session_new_keys');
       return saved ? JSON.parse(saved) : [];
     } catch (e) {
       return [];
     }
   });
 
-  // Table View Filter Mode: 'session' (trạm mới nhập hôm nay) | 'all' (tất cả trạm tăng giá)
+  const [sessionEditedKeys, setSessionEditedKeys] = useState(() => {
+    try {
+      const saved = localStorage.getItem('csht_session_edited_keys');
+      return saved ? JSON.parse(saved) : [];
+    } catch (e) {
+      return [];
+    }
+  });
+
+  // Table View Filter Mode: 'new' (trạm mới nhập thêm) | 'edited' (trạm vừa chỉnh sửa) | 'all' (tất cả trạm tăng giá)
   const [tableViewMode, setTableViewMode] = useState(() => {
     try {
-      const saved = localStorage.getItem('csht_session_updated_keys_v2');
-      const parsed = saved ? JSON.parse(saved) : [];
-      return parsed.length > 0 ? 'session' : 'all';
+      const savedNew = localStorage.getItem('csht_session_new_keys');
+      const parsedNew = savedNew ? JSON.parse(savedNew) : [];
+      if (parsedNew.length > 0) return 'new';
+
+      const savedEdit = localStorage.getItem('csht_session_edited_keys');
+      const parsedEdit = savedEdit ? JSON.parse(savedEdit) : [];
+      if (parsedEdit.length > 0) return 'edited';
+
+      return 'all';
     } catch (e) {
       return 'all';
     }
@@ -50,9 +64,15 @@ export default function AddPriceIncreaseTab({ data, onSaveStation, isSaving }) {
 
   useEffect(() => {
     try {
-      localStorage.setItem('csht_session_updated_keys_v2', JSON.stringify(sessionUpdatedKeys));
+      localStorage.setItem('csht_session_new_keys', JSON.stringify(sessionNewKeys));
     } catch (e) {}
-  }, [sessionUpdatedKeys]);
+  }, [sessionNewKeys]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('csht_session_edited_keys', JSON.stringify(sessionEditedKeys));
+    } catch (e) {}
+  }, [sessionEditedKeys]);
 
   // Helper functions for formatting numbers with dots (hàng nghìn)
   const formatNumberWithDots = (val) => {
@@ -147,11 +167,13 @@ export default function AddPriceIncreaseTab({ data, onSaveStation, isSaving }) {
     setFileName(fileItem.name);
   };
 
-  // Clear Session List
+  // Clear Session Lists
   const handleClearSessionList = () => {
-    if (window.confirm('Bạn có chắc muốn làm mới danh sách trạm đã nhập hôm nay?')) {
-      setSessionUpdatedKeys([]);
-      localStorage.removeItem('csht_session_updated_keys_v2');
+    if (window.confirm('Bạn có chắc muốn làm mới danh sách trạm đã theo dõi trong phiên hôm nay?')) {
+      setSessionNewKeys([]);
+      setSessionEditedKeys([]);
+      localStorage.removeItem('csht_session_new_keys');
+      localStorage.removeItem('csht_session_edited_keys');
       setTableViewMode('all');
     }
   };
@@ -179,18 +201,21 @@ export default function AddPriceIncreaseTab({ data, onSaveStation, isSaving }) {
       ghiChu: lyDo.trim(),
       baoCaoVTT: baoCaoVTT.trim() || 'Chưa làm văn bản báo cáo',
       diaChiDoiTac: diaChiDoiTac.trim(),
-      fileDinhKem: fileDinhKem.trim()
+      fileDinhKem: fileDinhKem.trim(),
+      fileName: fileName.trim()
     };
 
-    // Record unique key in session list
+    // Classify as brand new price increase entry or edit to an existing price increase station
+    const isExistingTangGiaStation = selectedStation.isTangGia || selectedStation.deXuatT7 > 0 || selectedStation.chenhLechDonGia > 0;
+
     if (stKey) {
-      setSessionUpdatedKeys(prev => {
-        if (!prev.includes(stKey)) {
-          return [...prev, stKey];
-        }
-        return prev;
-      });
-      setTableViewMode('session');
+      if (isExistingTangGiaStation) {
+        setSessionEditedKeys(prev => prev.includes(stKey) ? prev : [...prev, stKey]);
+        setTableViewMode('edited');
+      } else {
+        setSessionNewKeys(prev => prev.includes(stKey) ? prev : [...prev, stKey]);
+        setTableViewMode('new');
+      }
     }
 
     onSaveStation(updatedStation);
@@ -204,14 +229,22 @@ export default function AddPriceIncreaseTab({ data, onSaveStation, isSaving }) {
     return data.filter(st => st.isTangGia || st.deXuatT7 > 0 || st.chenhLechDonGia > 0);
   }, [data]);
 
-  // Session updated stations list (matched by unique key)
-  const sessionList = useMemo(() => {
-    return data.filter(st => sessionUpdatedKeys.includes(getStationKey(st)));
-  }, [data, sessionUpdatedKeys]);
+  // Newly Added Stations List in this Session
+  const sessionNewList = useMemo(() => {
+    return data.filter(st => sessionNewKeys.includes(getStationKey(st)));
+  }, [data, sessionNewKeys]);
 
-  // Active list based on view mode ('session' vs 'all')
+  // Edited Existing Stations List in this Session
+  const sessionEditedList = useMemo(() => {
+    return data.filter(st => sessionEditedKeys.includes(getStationKey(st)));
+  }, [data, sessionEditedKeys]);
+
+  // Active list based on view mode ('new' vs 'edited' vs 'all')
   const activeDisplayList = useMemo(() => {
-    const list = tableViewMode === 'session' ? sessionList : tangGiaList;
+    let list = tangGiaList;
+    if (tableViewMode === 'new') list = sessionNewList;
+    else if (tableViewMode === 'edited') list = sessionEditedList;
+
     if (!tableSearch.trim()) return list;
     const q = tableSearch.toLowerCase().trim();
     return list.filter(st =>
@@ -223,10 +256,12 @@ export default function AddPriceIncreaseTab({ data, onSaveStation, isSaving }) {
       st.diaChiDoiTac?.toLowerCase().includes(q) ||
       st.baoCaoVTT?.toLowerCase().includes(q)
     );
-  }, [tableViewMode, sessionList, tangGiaList, tableSearch]);
+  }, [tableViewMode, sessionNewList, sessionEditedList, tangGiaList, tableSearch]);
 
-  // Statistics
-  const totalChenhLechMonth = activeDisplayList.reduce((sum, item) => sum + (item.chenhLechDonGia || 0), 0);
+  // Dynamic KPI total calculated cleanly from unique items in active display list
+  const totalChenhLechMonth = useMemo(() => {
+    return activeDisplayList.reduce((sum, item) => sum + (item.chenhLechDonGia || 0), 0);
+  }, [activeDisplayList]);
 
   const formatVND = (val) => {
     if (!val && val !== 0) return '0 ₫';
@@ -247,7 +282,7 @@ export default function AddPriceIncreaseTab({ data, onSaveStation, isSaving }) {
               NHẬP & CẬP NHẬT TRẠM TĂNG GIÁ CSHT
             </h2>
             <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
-              Tìm kiếm trạm theo Mã CSHT / Tên trạm, nhập đơn giá mới, địa chỉ đối tác, tiến độ báo cáo VTT, gắn file văn bản đính kèm và tự động đồng bộ sang Google Sheet.
+              Tìm kiếm trạm theo Mã CSHT / Tên trạm, nhập đơn giá mới, địa chỉ đối tác, tiến độ báo cáo VTT, đính kèm file văn bản và tự động đồng bộ lên Google Sheet.
             </p>
           </div>
         </div>
@@ -392,7 +427,7 @@ export default function AddPriceIncreaseTab({ data, onSaveStation, isSaving }) {
               {selectedStation.fileDinhKem && (
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.8rem', background: 'rgba(59, 130, 246, 0.15)', padding: '0.4rem 0.6rem', borderRadius: '6px', border: '1px solid rgba(59, 130, 246, 0.3)' }}>
                   <Paperclip size={14} style={{ color: '#60a5fa' }} />
-                  <span style={{ color: 'var(--text-secondary)' }}>File đính kèm hiện tại:</span>
+                  <span style={{ color: 'var(--text-secondary)' }}>File đính kèm:</span>
                   <a href={selectedStation.fileDinhKem} target="_blank" rel="noopener noreferrer" style={{ color: '#60a5fa', fontWeight: 700, textDecoration: 'underline', display: 'flex', alignItems: 'center', gap: '0.2rem' }}>
                     <span>Xem file</span>
                     <ExternalLink size={12} />
@@ -657,7 +692,7 @@ export default function AddPriceIncreaseTab({ data, onSaveStation, isSaving }) {
                   <input
                     type="text"
                     className="input-field"
-                    placeholder="Hoặc dán Link Google Drive/OneDrive/URL..."
+                    placeholder="Dán Link Google Drive/OneDrive để đồng bộ mượt nhất..."
                     value={fileDinhKem}
                     onChange={(e) => {
                       setFileDinhKem(e.target.value);
@@ -782,44 +817,69 @@ export default function AddPriceIncreaseTab({ data, onSaveStation, isSaving }) {
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.25rem' }}>
               <Flame size={20} style={{ color: '#f59e0b' }} />
               <h3 style={{ fontSize: '1.1rem', fontWeight: 700, color: 'var(--text-main)' }}>
-                {tableViewMode === 'session' ? `Danh Sách Trạm Vừa Nhập Mới (${sessionList.length} trạm)` : `Danh Sách Tất Cả Trạm Tăng Giá (${tangGiaList.length} trạm)`}
+                {tableViewMode === 'new' 
+                  ? `Biểu 1: Danh Sách Trạm Mới Nhập Thêm (${sessionNewList.length} trạm)` 
+                  : tableViewMode === 'edited'
+                  ? `Biểu 2: Danh Sách Trạm Vừa Chỉnh Sửa (${sessionEditedList.length} trạm)`
+                  : `Biểu 3: Danh Sách Tất Cả Trạm Tăng Giá (${tangGiaList.length} trạm)`}
               </h3>
             </div>
             <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
-              Chế độ xem phân loại giúp theo dõi chính xác file đính kèm, tiến độ Báo cáo VTT và các trạm vừa cập nhật.
+              Thống kê chuẩn xác theo từng biểu riêng biệt, không cộng dồn lũy kế sai lệch.
             </p>
           </div>
 
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
             {/* View Mode Buttons */}
-            <div style={{ display: 'flex', background: 'var(--bg-primary)', padding: '0.25rem', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-color)' }}>
+            <div style={{ display: 'flex', background: 'var(--bg-primary)', padding: '0.25rem', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-color)', gap: '0.25rem' }}>
               <button
                 type="button"
-                onClick={() => setTableViewMode('session')}
+                onClick={() => setTableViewMode('new')}
                 style={{
-                  padding: '0.4rem 0.85rem',
-                  fontSize: '0.8rem',
-                  fontWeight: tableViewMode === 'session' ? 700 : 500,
+                  padding: '0.4rem 0.75rem',
+                  fontSize: '0.775rem',
+                  fontWeight: tableViewMode === 'new' ? 700 : 500,
                   borderRadius: 'var(--radius-sm)',
                   border: 'none',
-                  background: tableViewMode === 'session' ? '#3b82f6' : 'transparent',
-                  color: tableViewMode === 'session' ? '#fff' : 'var(--text-secondary)',
+                  background: tableViewMode === 'new' ? '#3b82f6' : 'transparent',
+                  color: tableViewMode === 'new' ? '#fff' : 'var(--text-secondary)',
                   cursor: 'pointer',
                   display: 'flex',
                   alignItems: 'center',
-                  gap: '0.4rem'
+                  gap: '0.35rem'
                 }}
               >
                 <Sparkles size={14} />
-                <span>Trạm Mới Nhập ({sessionList.length})</span>
+                <span>Trạm Mới Nhập ({sessionNewList.length})</span>
               </button>
               
               <button
                 type="button"
+                onClick={() => setTableViewMode('edited')}
+                style={{
+                  padding: '0.4rem 0.75rem',
+                  fontSize: '0.775rem',
+                  fontWeight: tableViewMode === 'edited' ? 700 : 500,
+                  borderRadius: 'var(--radius-sm)',
+                  border: 'none',
+                  background: tableViewMode === 'edited' ? '#8b5cf6' : 'transparent',
+                  color: tableViewMode === 'edited' ? '#fff' : 'var(--text-secondary)',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.35rem'
+                }}
+              >
+                <Edit3 size={14} />
+                <span>Trạm Vừa Sửa ({sessionEditedList.length})</span>
+              </button>
+
+              <button
+                type="button"
                 onClick={() => setTableViewMode('all')}
                 style={{
-                  padding: '0.4rem 0.85rem',
-                  fontSize: '0.8rem',
+                  padding: '0.4rem 0.75rem',
+                  fontSize: '0.775rem',
                   fontWeight: tableViewMode === 'all' ? 700 : 500,
                   borderRadius: 'var(--radius-sm)',
                   border: 'none',
@@ -828,7 +888,7 @@ export default function AddPriceIncreaseTab({ data, onSaveStation, isSaving }) {
                   cursor: 'pointer',
                   display: 'flex',
                   alignItems: 'center',
-                  gap: '0.4rem'
+                  gap: '0.35rem'
                 }}
               >
                 <List size={14} />
@@ -836,23 +896,23 @@ export default function AddPriceIncreaseTab({ data, onSaveStation, isSaving }) {
               </button>
             </div>
 
-            {/* Clear Session List Button */}
-            {sessionList.length > 0 && (
+            {/* Clear Session Lists Button */}
+            {(sessionNewList.length > 0 || sessionEditedList.length > 0) && (
               <button
                 type="button"
                 onClick={handleClearSessionList}
                 className="btn btn-secondary"
                 style={{ padding: '0.4rem 0.75rem', fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.35rem' }}
-                title="Làm mới danh sách trạm đã nhập hôm nay"
+                title="Làm mới danh sách theo dõi phiên làm việc"
               >
                 <Trash2 size={13} />
-                <span>Xóa danh sách vừa nhập</span>
+                <span>Làm mới danh sách phiên</span>
               </button>
             )}
 
-            {/* KPI Totals */}
+            {/* Dynamic KPI Total calculation for the active tab */}
             <div style={{ background: 'rgba(245, 158, 11, 0.15)', border: '1px solid rgba(245, 158, 11, 0.3)', padding: '0.4rem 0.85rem', borderRadius: 'var(--radius-md)', textAlign: 'right' }}>
-              <span style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', display: 'block' }}>TỔNG CHÊNH LỆCH TĂNG/THÁNG:</span>
+              <span style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', display: 'block' }}>TỔNG CHÊNH LỆCH BẢNG NÀY:</span>
               <strong style={{ color: '#fbbf24', fontSize: '0.95rem' }}>+{formatVND(totalChenhLechMonth)}</strong>
             </div>
           </div>
@@ -863,7 +923,13 @@ export default function AddPriceIncreaseTab({ data, onSaveStation, isSaving }) {
           <input
             type="text"
             className="input-field"
-            placeholder={tableViewMode === 'session' ? "Lọc danh sách trạm vừa nhập..." : "Lọc tất cả danh sách trạm tăng giá..."}
+            placeholder={
+              tableViewMode === 'new' 
+                ? "Lọc danh sách trạm mới nhập thêm..." 
+                : tableViewMode === 'edited' 
+                ? "Lọc danh sách trạm vừa chỉnh sửa..." 
+                : "Lọc tất cả danh sách trạm tăng giá..."
+            }
             value={tableSearch}
             onChange={(e) => setTableSearch(e.target.value)}
             style={{
@@ -878,9 +944,15 @@ export default function AddPriceIncreaseTab({ data, onSaveStation, isSaving }) {
             }}
           />
 
-          {sessionList.length > 0 && tableViewMode === 'session' && (
-            <span className="badge" style={{ background: 'rgba(16, 185, 129, 0.15)', color: '#34d399', border: '1px solid rgba(16, 185, 129, 0.3)', padding: '0.35rem 0.75rem', fontSize: '0.8rem' }}>
-              ✨ Đã nhập <strong>{sessionList.length} trạm mới</strong> trong phiên này.
+          {tableViewMode === 'new' && sessionNewList.length > 0 && (
+            <span className="badge" style={{ background: 'rgba(59, 130, 246, 0.15)', color: '#60a5fa', border: '1px solid rgba(59, 130, 246, 0.3)', padding: '0.35rem 0.75rem', fontSize: '0.8rem' }}>
+              ✨ Có <strong>{sessionNewList.length} trạm mới nhập thêm</strong> trong phiên này.
+            </span>
+          )}
+
+          {tableViewMode === 'edited' && sessionEditedList.length > 0 && (
+            <span className="badge" style={{ background: 'rgba(139, 92, 246, 0.15)', color: '#c084fc', border: '1px solid rgba(139, 92, 246, 0.3)', padding: '0.35rem 0.75rem', fontSize: '0.8rem' }}>
+              ✏️ Có <strong>{sessionEditedList.length} trạm vừa chỉnh sửa</strong> thông tin.
             </span>
           )}
         </div>
@@ -912,7 +984,9 @@ export default function AddPriceIncreaseTab({ data, onSaveStation, isSaving }) {
                   const donGiaCu = st.donGia2025 || 0;
                   const donGiaMoi = st.deXuatT7 > 0 ? st.deXuatT7 : (st.donGia2026 || donGiaCu);
                   const diff = st.chenhLechDonGia || Math.max(0, donGiaMoi - donGiaCu);
-                  const isNewlyAdded = sessionUpdatedKeys.includes(stKey);
+                  
+                  const isNewlyAdded = sessionNewKeys.includes(stKey);
+                  const isEdited = sessionEditedKeys.includes(stKey);
 
                   const statusVTT = st.baoCaoVTT || 'Chưa làm văn bản báo cáo';
                   const isDongY = statusVTT.toLowerCase().includes('đồng ý');
@@ -923,12 +997,12 @@ export default function AddPriceIncreaseTab({ data, onSaveStation, isSaving }) {
                       key={stKey || idx}
                       style={{
                         borderBottom: '1px solid var(--border-color)',
-                        background: isNewlyAdded ? 'rgba(59, 130, 246, 0.06)' : 'transparent'
+                        background: isNewlyAdded ? 'rgba(59, 130, 246, 0.06)' : isEdited ? 'rgba(139, 92, 246, 0.06)' : 'transparent'
                       }}
                       onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.04)'}
-                      onMouseLeave={(e) => e.currentTarget.style.background = isNewlyAdded ? 'rgba(59, 130, 246, 0.06)' : 'transparent'}
+                      onMouseLeave={(e) => e.currentTarget.style.background = isNewlyAdded ? 'rgba(59, 130, 246, 0.06)' : isEdited ? 'rgba(139, 92, 246, 0.06)' : 'transparent'}
                     >
-                      <td style={{ padding: '0.6rem 0.5rem', textAlign: 'center', fontWeight: 700, color: isNewlyAdded ? '#60a5fa' : 'var(--text-muted)' }}>
+                      <td style={{ padding: '0.6rem 0.5rem', textAlign: 'center', fontWeight: 700, color: 'var(--text-muted)' }}>
                         {idx + 1}
                       </td>
                       <td style={{ padding: '0.6rem', fontWeight: 700, color: '#60a5fa' }}>
@@ -936,6 +1010,11 @@ export default function AddPriceIncreaseTab({ data, onSaveStation, isSaving }) {
                         {isNewlyAdded && (
                           <span style={{ marginLeft: '0.4rem', fontSize: '0.65rem', background: '#3b82f6', color: '#fff', padding: '0.1rem 0.4rem', borderRadius: '4px' }}>
                             Mới
+                          </span>
+                        )}
+                        {isEdited && !isNewlyAdded && (
+                          <span style={{ marginLeft: '0.4rem', fontSize: '0.65rem', background: '#8b5cf6', color: '#fff', padding: '0.1rem 0.4rem', borderRadius: '4px' }}>
+                            Vừa sửa
                           </span>
                         )}
                       </td>
@@ -1029,8 +1108,10 @@ export default function AddPriceIncreaseTab({ data, onSaveStation, isSaving }) {
               ) : (
                 <tr>
                   <td colSpan="13" style={{ textAlign: 'center', padding: '2.5rem', color: 'var(--text-muted)' }}>
-                    {tableViewMode === 'session' 
-                      ? 'Chưa có trạm nào được nhập mới trong phiên hôm nay. Vui lòng chọn trạm phía trên để bắt đầu nhập!' 
+                    {tableViewMode === 'new' 
+                      ? 'Chưa có trạm nào được nhập mới thêm trong phiên này. Vui lòng chọn trạm phía trên để nhập mới!' 
+                      : tableViewMode === 'edited'
+                      ? 'Chưa có trạm nào được sửa thông tin trong phiên này.'
                       : 'Chưa có trạm nào được cập nhật tăng giá.'}
                   </td>
                 </tr>

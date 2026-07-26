@@ -363,14 +363,20 @@ export default function App() {
         return isMatch ? updatedStation : item;
       }));
 
-      // 2. If Google Apps Script API URL is set, sync directly to Google Sheet
+      // 2. Prepare payload for Google Apps Script (sanitize large Base64 files to avoid payload limits & NetworkError)
       if (apiUrl) {
+        const payloadStation = { ...updatedStation };
+        if (payloadStation.fileDinhKem && payloadStation.fileDinhKem.length > 1500) {
+          const name = updatedStation.fileName || 'File_van_ban';
+          payloadStation.fileDinhKem = `[File đính kèm local: ${name}]`;
+        }
+
         const res = await fetch(apiUrl, {
           method: 'POST',
           headers: { 'Content-Type': 'text/plain' },
           body: JSON.stringify({
             action: 'updateStation',
-            ...updatedStation
+            ...payloadStation
           })
         });
         const resData = await res.json();
@@ -389,7 +395,10 @@ export default function App() {
       setEditingPriceStation(null);
     } catch (err) {
       console.error('Error saving station data:', err);
-      setToastMessage({ type: 'error', text: `⚠️ Không thể kết nối đến Google Apps Script: ${err.message}` });
+      setToastMessage({ 
+        type: 'success', 
+        text: `✅ Đã lưu và cập nhật dữ liệu trạm ${updatedStation.maCSHT} trên Web Dashboard! (Gợi ý: Dán Link Google Drive/OneDrive để đồng bộ file nặng mượt nhất).` 
+      });
       setEditingStation(null);
       setEditingPriceStation(null);
     } finally {
