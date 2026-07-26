@@ -89,9 +89,27 @@ export default function DetailModal({ station, isOpen, onClose }) {
               <div>
                 <strong style={{ color: 'var(--text-secondary)' }}>File đính kèm / Văn bản:</strong>{' '}
                 {station.fileDinhKem ? (
-                  <a href={station.fileDinhKem} target="_blank" rel="noopener noreferrer" style={{ color: '#60a5fa', fontWeight: 700, textDecoration: 'underline' }}>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const url = String(station.fileDinhKem).trim();
+                      if (/^(http:\/\/|https:\/\/)/i.test(url)) {
+                        window.open(url, '_blank', 'noopener,noreferrer');
+                      } else if (/^(drive\.google\.com|docs\.google\.com|dropbox\.com|onedrive\.)/i.test(url)) {
+                        window.open('https://' + url, '_blank', 'noopener,noreferrer');
+                      } else if (url.startsWith('data:')) {
+                        const win = window.open('', '_blank');
+                        if (win) {
+                          win.document.write(`<iframe src="${url}" style="width:100vw;height:100vh;border:none;"></iframe>`);
+                        }
+                      } else {
+                        alert(`Văn bản đính kèm trạm ${station.maCSHT}: "${url}"`);
+                      }
+                    }}
+                    style={{ background: 'none', border: 'none', color: '#60a5fa', fontWeight: 700, textDecoration: 'underline', cursor: 'pointer', padding: 0 }}
+                  >
                     📎 Xem văn bản đính kèm
-                  </a>
+                  </button>
                 ) : '-'}
               </div>
               <div style={{ gridColumn: '1 / -1' }}><strong style={{ color: 'var(--text-secondary)' }}>Ghi chú:</strong> {station.ghiChu || '-'}</div>

@@ -74,6 +74,75 @@ export default function AddPriceIncreaseTab({ data, onSaveStation, isSaving }) {
     } catch (e) {}
   }, [sessionEditedKeys]);
 
+  // Smart File Viewer Handler (Prevents broken relative routing to Dashboard)
+  const handleOpenFile = (rawUrl, station) => {
+    if (!rawUrl) return;
+    const url = String(rawUrl).trim();
+
+    // 1. Standard Web URL (http:// or https://)
+    if (/^(http:\/\/|https:\/\/)/i.test(url)) {
+      window.open(url, '_blank', 'noopener,noreferrer');
+      return;
+    }
+
+    // 2. Web URL without protocol (e.g. drive.google.com, docs.google.com, dropbox, etc.)
+    if (/^(drive\.google\.com|docs\.google\.com|dropbox\.com|onedrive\.|1drv\.ms|[a-z0-9-]+\.[a-z]{2,}\/)/i.test(url)) {
+      window.open('https://' + url, '_blank', 'noopener,noreferrer');
+      return;
+    }
+
+    // 3. Base64 Data URL
+    if (url.startsWith('data:')) {
+      const win = window.open('', '_blank');
+      if (win) {
+        const fName = station?.fileName || (station?.maCSHT ? `${station.maCSHT}_van_ban.pdf` : 'van_ban_dinh_kem.pdf');
+        win.document.write(`
+          <!DOCTYPE html>
+          <html>
+            <head>
+              <title>Xem File Văn Bản - ${station?.maCSHT || ''}</title>
+              <style>
+                body { margin: 0; background: #0f172a; color: #fff; font-family: system-ui, -apple-system, sans-serif; display: flex; flex-direction: column; height: 100vh; }
+                header { padding: 0.75rem 1.5rem; background: #1e293b; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid #334155; }
+                a.btn { background: #3b82f6; color: #fff; text-decoration: none; padding: 0.5rem 1rem; border-radius: 6px; font-weight: 600; font-size: 0.85rem; }
+                iframe { flex: 1; border: none; background: #fff; }
+              </style>
+            </head>
+            <body>
+              <header>
+                <div><strong>Văn Bản Đính Kèm:</strong> ${station?.maCSHT || ''} - ${station?.tenCSHT || ''}</div>
+                <a href="${url}" download="${fName}" class="btn">⬇️ Tải File Về Máy</a>
+              </header>
+              <iframe src="${url}"></iframe>
+            </body>
+          </html>
+        `);
+      } else {
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = station?.fileName || 'van_ban_dinh_kem.pdf';
+        a.click();
+      }
+      return;
+    }
+
+    // 4. Look up in recentFiles or local storage
+    try {
+      const saved = localStorage.getItem('csht_recent_attached_files');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        const match = parsed.find(f => f.name === url || f.url === url || url.includes(f.name));
+        if (match && match.url) {
+          handleOpenFile(match.url, station);
+          return;
+        }
+      }
+    } catch (e) {}
+
+    // 5. Fallback: Text label or custom message
+    alert(`Văn bản đính kèm trạm ${station?.maCSHT || ''}:\n"${url}"\n\n📌 Gợi ý: Hãy dán Link Google Drive/OneDrive vào ô đính kèm để xem 1-click từ mọi thiết bị!`);
+  };
+
   // Helper functions for formatting numbers with dots (hàng nghìn)
   const formatNumberWithDots = (val) => {
     if (val === null || val === undefined || val === '') return '';
@@ -428,10 +497,14 @@ export default function AddPriceIncreaseTab({ data, onSaveStation, isSaving }) {
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.8rem', background: 'rgba(59, 130, 246, 0.15)', padding: '0.4rem 0.6rem', borderRadius: '6px', border: '1px solid rgba(59, 130, 246, 0.3)' }}>
                   <Paperclip size={14} style={{ color: '#60a5fa' }} />
                   <span style={{ color: 'var(--text-secondary)' }}>File đính kèm:</span>
-                  <a href={selectedStation.fileDinhKem} target="_blank" rel="noopener noreferrer" style={{ color: '#60a5fa', fontWeight: 700, textDecoration: 'underline', display: 'flex', alignItems: 'center', gap: '0.2rem' }}>
+                  <button
+                    type="button"
+                    onClick={() => handleOpenFile(selectedStation.fileDinhKem, selectedStation)}
+                    style={{ background: 'none', border: 'none', color: '#60a5fa', fontWeight: 700, textDecoration: 'underline', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '0.2rem', padding: 0 }}
+                  >
                     <span>Xem file</span>
                     <ExternalLink size={12} />
-                  </a>
+                  </button>
                 </div>
               )}
 
@@ -1062,18 +1135,17 @@ export default function AddPriceIncreaseTab({ data, onSaveStation, isSaving }) {
                       {/* FILE ĐÍNH KÈM / VĂN BẢN CELL */}
                       <td style={{ padding: '0.6rem', textAlign: 'center', fontSize: '0.8rem' }}>
                         {st.fileDinhKem ? (
-                          <a
-                            href={st.fileDinhKem}
-                            target="_blank"
-                            rel="noopener noreferrer"
+                          <button
+                            type="button"
+                            onClick={() => handleOpenFile(st.fileDinhKem, st)}
                             className="badge badge-blue"
-                            style={{ padding: '0.3rem 0.6rem', display: 'inline-flex', alignItems: 'center', gap: '0.3rem', textDecoration: 'none' }}
-                            title="Mở văn bản đính kèm"
+                            style={{ padding: '0.3rem 0.6rem', display: 'inline-flex', alignItems: 'center', gap: '0.3rem', cursor: 'pointer', border: '1px solid rgba(59, 130, 246, 0.4)' }}
+                            title="Click để mở/xem văn bản đính kèm"
                           >
                             <Paperclip size={12} />
                             <span>Xem File</span>
                             <ExternalLink size={10} />
-                          </a>
+                          </button>
                         ) : (
                           <span style={{ color: 'var(--text-muted)' }}>---</span>
                         )}
