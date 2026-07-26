@@ -27,11 +27,19 @@ export default function FileViewerModal({ fileData, onClose, onUpdateFileUrl }) 
     if (!file) return;
 
     setIsUploading(true);
+
+    // 1. Open file immediately in a new tab for local viewing
+    try {
+      const blobUrl = URL.createObjectURL(file);
+      window.open(blobUrl, '_blank');
+    } catch (err) {}
+
+    // 2. Read as Base64 and upload to Google Drive for all devices
     const reader = new FileReader();
-    reader.onload = (event) => {
+    reader.onload = async (event) => {
       const base64Url = event.target.result;
       if (onUpdateFileUrl) {
-        onUpdateFileUrl(station, base64Url, file.name);
+        await onUpdateFileUrl(station, base64Url, file.name);
       }
       setIsUploading(false);
       onClose();
@@ -39,10 +47,10 @@ export default function FileViewerModal({ fileData, onClose, onUpdateFileUrl }) 
     reader.readAsDataURL(file);
   };
 
-  const handleSaveDriveLink = () => {
+  const handleSaveDriveLink = async () => {
     if (!driveUrlInput.trim()) return;
     if (onUpdateFileUrl) {
-      onUpdateFileUrl(station, driveUrlInput.trim(), 'Link_Văn_Bản');
+      await onUpdateFileUrl(station, driveUrlInput.trim(), 'Link_Văn_Bản');
     }
     onClose();
   };
