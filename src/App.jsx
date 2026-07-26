@@ -118,8 +118,8 @@ export default function App() {
         donGia2026Effective = donGia2025;
       }
 
-      const chenhLechDonGia = (donGia2026Effective > donGia2025 && donGia2025 > 0) ? (donGia2026Effective - donGia2025) : 0;
-      const isTangGia = chenhLechDonGia > 0;
+      const chenhLechDonGia = (donGia2026Effective > donGia2025 && donGia2025 > 0) ? (donGia2026Effective - donGia2025) : (row.chenhLechDonGia || 0);
+      const isTangGia = Boolean(row.isTangGia || chenhLechDonGia > 0 || row.deXuatT7 > 0 || (row.chenhLechDonGia > 0));
       const rawNo2025Ton = row.rawNo2025Ton !== undefined ? row.rawNo2025Ton : (row.no2025Ton || 0);
       const tong2025DaTra = row.tong2025DaTra || 0;
       const tongChiTiet2025 = row.tongChiTiet2025 || 0;

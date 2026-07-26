@@ -315,7 +315,7 @@ export default function AddPriceIncreaseTab({ data, onSaveStation, isSaving }) {
 
   // Filtered List of all stations with Price Increase
   const tangGiaList = useMemo(() => {
-    return data.filter(st => st.isTangGia || st.deXuatT7 > 0 || st.chenhLechDonGia > 0);
+    return data.filter(st => st.isTangGia);
   }, [data]);
 
   // Newly Added Stations List in this Session
