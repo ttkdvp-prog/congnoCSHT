@@ -342,7 +342,7 @@ h1, h2, h3, h4, .brand-font {
 }
 
 .sidebar-wrapper {
-  width: 270px;
+  width: 295px;
   flex-shrink: 0;
   position: sticky;
   top: 1.5rem;
@@ -351,6 +351,12 @@ h1, h2, h3, h4, .brand-font {
 .main-content-wrapper {
   flex: 1;
   min-width: 0;
+}
+
+.tab-label-text {
+  white-space: normal;
+  word-break: break-word;
+  line-height: 1.35;
 }
 
 @media (max-width: 900px) {
@@ -378,7 +384,8 @@ h1, h2, h3, h4, .brand-font {
     white-space: nowrap !important;
   }
 
-  .sidebar-nav span {
+  .sidebar-nav .tab-label-text {
     white-space: nowrap !important;
+    word-break: normal !important;
   }
 }
