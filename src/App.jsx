@@ -397,7 +397,15 @@ export default function App() {
               return isMatch ? { ...item, fileDinhKem: resData.fileUrl } : item;
             }));
           }
-          setToastMessage({ type: 'success', text: `✅ Đã lưu và đồng bộ đính kèm file về Hệ Thống cho trạm ${updatedStation.maCSHT}!` });
+          if (Array.isArray(resData.sessionNewKeys)) {
+            setGlobalSessionNewKeys(resData.sessionNewKeys);
+            try { localStorage.setItem('csht_session_new_keys', JSON.stringify(resData.sessionNewKeys)); } catch(e){}
+          }
+          if (Array.isArray(resData.sessionEditedKeys)) {
+            setGlobalSessionEditedKeys(resData.sessionEditedKeys);
+            try { localStorage.setItem('csht_session_edited_keys', JSON.stringify(resData.sessionEditedKeys)); } catch(e){}
+          }
+          setToastMessage({ type: 'success', text: `✅ Đã lưu và đồng bộ về Hệ Thống cho trạm ${updatedStation.maCSHT}!` });
         } else {
           setToastMessage({ type: 'warning', text: `⚠️ Ứng dụng đã cập nhật giao diện nhưng Máy Chủ phản hồi: ${resData.message || 'Lỗi lưu'}` });
         }

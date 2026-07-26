@@ -420,11 +420,16 @@ function doPost(e) {
       }
     } catch (sErr) {}
 
+    var sessionNewKeys = JSON.parse(scriptProps.getProperty('csht_session_new_keys') || '[]');
+    var sessionEditedKeys = JSON.parse(scriptProps.getProperty('csht_session_edited_keys') || '[]');
+
     return jsonResponse({
       status: 'success',
       message: 'Đã cập nhật dữ liệu thành công lên Google Sheet cho trạm ' + (maCSHT || targetRow),
       updatedRow: targetRow,
-      fileUrl: finalFileUrl
+      fileUrl: finalFileUrl,
+      sessionNewKeys: sessionNewKeys,
+      sessionEditedKeys: sessionEditedKeys
     });
 
   } catch (err) {

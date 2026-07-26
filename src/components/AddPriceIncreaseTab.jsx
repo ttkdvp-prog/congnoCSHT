@@ -310,13 +310,22 @@ export default function AddPriceIncreaseTab({ data, onSaveStation, isSaving, ser
 
     // Classify as brand new price increase entry or edit to an existing price increase station
     const isExistingTangGiaStation = selectedStation.isTangGia || selectedStation.deXuatT7 > 0 || selectedStation.chenhLechDonGia > 0;
+    updatedStation.isNewlyAdded = !isExistingTangGiaStation;
 
     if (stKey) {
       if (isExistingTangGiaStation) {
-        setSessionEditedKeys(prev => prev.includes(stKey) ? prev : [...prev, stKey]);
+        setSessionEditedKeys(prev => {
+          const next = prev.includes(stKey) ? prev : [...prev, stKey];
+          try { localStorage.setItem('csht_session_edited_keys', JSON.stringify(next)); } catch(e){}
+          return next;
+        });
         setTableViewMode('edited');
       } else {
-        setSessionNewKeys(prev => prev.includes(stKey) ? prev : [...prev, stKey]);
+        setSessionNewKeys(prev => {
+          const next = prev.includes(stKey) ? prev : [...prev, stKey];
+          try { localStorage.setItem('csht_session_new_keys', JSON.stringify(next)); } catch(e){}
+          return next;
+        });
         setTableViewMode('new');
       }
     }
@@ -350,16 +359,9 @@ export default function AddPriceIncreaseTab({ data, onSaveStation, isSaving, ser
     return data.filter(st => sessionNewKeys.includes(getStationKey(st)));
   }, [data, sessionNewKeys]);
 
-  // Edited Existing Stations List in this Session (with smart cross-device fallback)
+  // Edited Existing Stations List in this Session
   const sessionEditedList = useMemo(() => {
-    return data.filter(st => {
-      const key = getStationKey(st);
-      if (sessionEditedKeys.includes(key)) return true;
-      // Fallback for newly connected mobile devices: match stations with updated VTT reports, notes or attached files
-      const hasReport = st.baoCaoVTT && st.baoCaoVTT !== 'Chưa làm văn bản báo cáo';
-      const hasFile = Boolean(st.fileDinhKem);
-      return Boolean(hasReport || hasFile);
-    });
+    return data.filter(st => sessionEditedKeys.includes(getStationKey(st)));
   }, [data, sessionEditedKeys]);
 
   // Active list based on view mode ('new' | 'edited' | 'chua_bao_cao' | 'da_bao_cao_chua_duyet' | 'vtt_dong_y' | 'all')
