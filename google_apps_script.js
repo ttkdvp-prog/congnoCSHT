@@ -545,6 +545,11 @@ function doPost(e) {
       } catch (fileErr) {
         finalFileUrl = contents.fileName ? contents.fileName : finalFileUrl;
       }
+    } else if (finalFileUrl && (finalFileUrl.indexOf('drive.google.com') !== -1 || finalFileUrl.indexOf('docs.google.com') !== -1)) {
+      var dMatch = finalFileUrl.match(/\/d\/([a-zA-Z0-9_-]+)/) || finalFileUrl.match(/id=([a-zA-Z0-9_-]+)/);
+      if (dMatch && dMatch[1]) {
+        finalFileUrl = 'https://drive.google.com/file/d/' + dMatch[1] + '/preview';
+      }
     }
 
     updateFieldByPattern(['người thụ hưởng'], contents.nguoiThuHuong);
