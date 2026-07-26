@@ -1,4 +1,4 @@
-# Dashboard Quản Lý Công Nợ & Trạm Tăng Giá CSHT - VNPT
+# Dashboard Quản Lý Công Nợ & Tăng Giá CSHT - VNPT
 
 Hệ thống Dashboard WebApp phân tích công nợ thuê cơ sở hạ tầng (CSHT), theo dõi tiến độ thanh toán và quản lý danh sách các trạm điều chỉnh tăng giá năm 2026. 
 

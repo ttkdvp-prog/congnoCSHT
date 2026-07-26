@@ -34,7 +34,7 @@ export default function Header({
           </div>
           <div>
             <h1 style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--text-main)', lineHeight: 1.2 }}>
-              DASHBOARD QUẢN LÝ CÔNG NỢ & TRẠM TĂNG GIÁ CSHT
+              DASHBOARD QUẢN LÝ CÔNG NỢ & TĂNG GIÁ CSHT
             </h1>
             <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
               TTHT Phú Thọ ({totalCount} trạm)
