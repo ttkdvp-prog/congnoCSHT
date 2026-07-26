@@ -1,7 +1,7 @@
 /**
  * Universal File Viewer Utility for Web App (Works seamlessly on PC, iPhone iOS Safari, and Android Chrome)
  */
-export const openAttachedFile = (rawUrl, station = {}) => {
+export const openAttachedFile = (rawUrl, station = {}, onOpenModal = null) => {
   if (!rawUrl) return;
   let url = String(rawUrl).trim();
 
@@ -57,6 +57,10 @@ export const openAttachedFile = (rawUrl, station = {}) => {
     return;
   }
 
-  // 5. Fallback: Plain Text Filename or Custom Message
-  alert(`📌 Thông tin file đính kèm trạm ${station?.maCSHT || ''}:\n"${url}"\n\n(Để mọi người xem file 1-click từ điện thoại & máy tính khác, vui lòng dán Link Google Drive/OneDrive public vào ô đính kèm).`);
+  // 5. If it's a plain filename string or non-URL string, trigger Interactive FileViewerModal
+  if (typeof onOpenModal === 'function') {
+    onOpenModal({ url, station });
+  } else {
+    alert(`📌 Văn bản đính kèm trạm ${station?.maCSHT || ''}:\n"${url}"\n\n(Vui lòng dán Link Google Drive công khai vào ô đính kèm để xem 1-click từ mọi thiết bị).`);
+  }
 };

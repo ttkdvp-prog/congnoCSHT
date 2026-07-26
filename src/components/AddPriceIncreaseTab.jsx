@@ -4,7 +4,7 @@ import * as XLSX from 'xlsx';
 import rawFallbackData from '../data/csht_data.json';
 import { openAttachedFile } from '../utils/fileViewer';
 
-export default function AddPriceIncreaseTab({ data, onSaveStation, isSaving, serverSessionNewKeys = [], serverSessionEditedKeys = [] }) {
+export default function AddPriceIncreaseTab({ data, onSaveStation, isSaving, serverSessionNewKeys = [], serverSessionEditedKeys = [], onOpenViewerModal }) {
   // Baseline initial 137 price increase station keys
   const initialBaselineKeys = useMemo(() => {
     try {
@@ -134,7 +134,7 @@ export default function AddPriceIncreaseTab({ data, onSaveStation, isSaving, ser
 
   // Smart File Viewer Handler (Works seamlessly across PC, iOS Safari, Android Chrome)
   const handleOpenFile = (rawUrl, station) => {
-    openAttachedFile(rawUrl, station);
+    openAttachedFile(rawUrl, station, onOpenViewerModal);
   };
 
   // Remove a file from recent shared suggestions list

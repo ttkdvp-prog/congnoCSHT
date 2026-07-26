@@ -16,6 +16,7 @@ import EditPriceModal from './components/EditPriceModal';
 import EditStationModal from './components/EditStationModal';
 import DetailModal from './components/DetailModal';
 import ApiConfigModal from './components/ApiConfigModal';
+import FileViewerModal from './components/FileViewerModal';
 import { AlertTriangle, Settings, Download } from 'lucide-react';
 
 export default function App() {
@@ -33,6 +34,7 @@ export default function App() {
   const [editingStation, setEditingStation] = useState(null);
   const [editingPriceStation, setEditingPriceStation] = useState(null);
   const [viewingStation, setViewingStation] = useState(null);
+  const [viewingFileData, setViewingFileData] = useState(null);
   const [isConfigOpen, setIsConfigOpen] = useState(false);
 
   // Filter state
@@ -483,6 +485,17 @@ export default function App() {
     }
   };
 
+  // Handle station file update from FileViewerModal
+  const handleUpdateFileUrl = (station, fileUrl, fileName) => {
+    if (!station) return;
+    const updated = {
+      ...station,
+      fileDinhKem: fileUrl,
+      fileName: fileName || station.fileName || 'van_ban_dinh_kem'
+    };
+    handleSaveStation(updated);
+  };
+
   // Save API URL
   const handleSaveApiUrl = (url) => {
     setApiUrl(url);
@@ -694,6 +707,7 @@ export default function App() {
               isSaving={isSaving}
               serverSessionNewKeys={globalSessionNewKeys}
               serverSessionEditedKeys={globalSessionEditedKeys}
+              onOpenViewerModal={(fileData) => setViewingFileData(fileData)}
             />
           )}
 
@@ -875,6 +889,7 @@ export default function App() {
         station={viewingStation}
         isOpen={!!viewingStation}
         onClose={() => setViewingStation(null)}
+        onOpenViewerModal={(fileData) => setViewingFileData(fileData)}
       />
 
       {/* API Config Modal */}
@@ -885,6 +900,15 @@ export default function App() {
         onSaveUrl={handleSaveApiUrl}
         isLive={isLive}
       />
+
+      {/* Interactive File Viewer Modal */}
+      {viewingFileData && (
+        <FileViewerModal
+          fileData={viewingFileData}
+          onClose={() => setViewingFileData(null)}
+          onUpdateFileUrl={handleUpdateFileUrl}
+        />
+      )}
 
     </div>
   );

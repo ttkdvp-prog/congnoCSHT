@@ -2,7 +2,7 @@ import React from 'react';
 import { X, Building2, CreditCard, Calendar, FileText, Building } from 'lucide-react';
 import { openAttachedFile } from '../utils/fileViewer';
 
-export default function DetailModal({ station, isOpen, onClose }) {
+export default function DetailModal({ station, isOpen, onClose, onOpenViewerModal }) {
   if (!isOpen || !station) return null;
 
   const formatMoney = (val) => {
@@ -88,7 +88,7 @@ export default function DetailModal({ station, isOpen, onClose }) {
                 {station.fileDinhKem ? (
                   <button
                     type="button"
-                    onClick={() => openAttachedFile(station.fileDinhKem, station)}
+                    onClick={() => openAttachedFile(station.fileDinhKem, station, onOpenViewerModal)}
                     style={{ background: 'none', border: 'none', color: '#60a5fa', fontWeight: 700, textDecoration: 'underline', cursor: 'pointer', padding: 0 }}
                   >
                     📎 Xem văn bản đính kèm
