@@ -16,6 +16,25 @@ export default function AddPriceIncreaseTab({ data, onSaveStation, isSaving, ser
   const [fileDinhKem, setFileDinhKem] = useState('');
   const [fileName, setFileName] = useState('');
   const [tableSearch, setTableSearch] = useState('');
+  const [tableToHaTangFilter, setTableToHaTangFilter] = useState('all');
+  const [tableSiteFilter, setTableSiteFilter] = useState('all');
+
+  // Derive Tổ Hạ Tầng and Site Options
+  const toHaTangOptions = useMemo(() => {
+    const set = new Set();
+    data.forEach(st => {
+      if (st.toHaTang) set.add(st.toHaTang.trim());
+    });
+    return Array.from(set).sort();
+  }, [data]);
+
+  const siteOptions = useMemo(() => {
+    const set = new Set();
+    data.forEach(st => {
+      if (st.site) set.add(st.site.trim());
+    });
+    return Array.from(set).sort();
+  }, [data]);
 
   // List of recently attached files in this session (Shared across multiple stations)
   const [recentFiles, setRecentFiles] = useState(() => {
@@ -374,6 +393,14 @@ export default function AddPriceIncreaseTab({ data, onSaveStation, isSaving, ser
     else if (tableViewMode === 'da_bao_cao_chua_duyet') list = daBaoCaoChuaDuyetList;
     else if (tableViewMode === 'vtt_dong_y') list = vttDongYList;
 
+    if (tableToHaTangFilter !== 'all') {
+      list = list.filter(st => st.toHaTang?.trim().toLowerCase() === tableToHaTangFilter.trim().toLowerCase());
+    }
+
+    if (tableSiteFilter !== 'all') {
+      list = list.filter(st => st.site?.trim().toLowerCase() === tableSiteFilter.trim().toLowerCase());
+    }
+
     if (tableSearch.trim()) {
       const q = tableSearch.toLowerCase().trim();
       list = list.filter(st =>
@@ -399,7 +426,7 @@ export default function AddPriceIncreaseTab({ data, onSaveStation, isSaving, ser
 
       return diffB - diffA;
     });
-  }, [tableViewMode, sessionNewList, sessionEditedList, chuaBaoCaoList, daBaoCaoChuaDuyetList, vttDongYList, tangGiaList, tableSearch]);
+  }, [tableViewMode, sessionNewList, sessionEditedList, chuaBaoCaoList, daBaoCaoChuaDuyetList, vttDongYList, tangGiaList, tableSearch, tableToHaTangFilter, tableSiteFilter]);
 
   // Dynamic KPI total calculated cleanly from unique items in active display list
   const totalChenhLechMonth = useMemo(() => {
@@ -1230,53 +1257,122 @@ export default function AddPriceIncreaseTab({ data, onSaveStation, isSaving, ser
           </button>
         </div>
 
-        {/* Filter Input for Summary Table */}
-        <div style={{ marginBottom: '1rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '1rem', flexWrap: 'wrap' }}>
-          <input
-            type="text"
+        {/* Filter Bar for Summary Table */}
+        <div style={{ marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
+          <div style={{ position: 'relative', flex: 1, minWidth: '220px' }}>
+            <input
+              type="text"
+              className="input-field"
+              placeholder={
+                tableViewMode === 'new' 
+                  ? "Lọc danh sách trạm mới nhập thêm..." 
+                  : tableViewMode === 'edited' 
+                  ? "Lọc danh sách trạm vừa chỉnh sửa..." 
+                  : tableViewMode === 'chua_bao_cao'
+                  ? "Lọc danh sách trạm chưa làm văn bản báo cáo..."
+                  : tableViewMode === 'da_bao_cao_chua_duyet'
+                  ? "Lọc danh sách trạm đã báo cáo nhưng VTT chưa duyệt..."
+                  : tableViewMode === 'vtt_dong_y'
+                  ? "Lọc danh sách trạm VTT đã đồng ý..."
+                  : "Lọc tất cả danh sách trạm tăng giá..."
+              }
+              value={tableSearch}
+              onChange={(e) => setTableSearch(e.target.value)}
+              style={{
+                width: '100%',
+                padding: '0.5rem 0.85rem',
+                fontSize: '0.85rem',
+                borderRadius: 'var(--radius-md)',
+                background: 'var(--bg-primary)',
+                border: '1px solid var(--border-color)',
+                color: 'var(--text-main)'
+              }}
+            />
+          </div>
+
+          {/* Filter Dropdown: Tổ Hạ Tầng */}
+          <select
             className="input-field"
-            placeholder={
-              tableViewMode === 'new' 
-                ? "Lọc danh sách trạm mới nhập thêm..." 
-                : tableViewMode === 'edited' 
-                ? "Lọc danh sách trạm vừa chỉnh sửa..." 
-                : tableViewMode === 'chua_bao_cao'
-                ? "Lọc danh sách trạm chưa làm văn bản báo cáo..."
-                : tableViewMode === 'da_bao_cao_chua_duyet'
-                ? "Lọc danh sách trạm đã báo cáo nhưng VTT chưa duyệt..."
-                : tableViewMode === 'vtt_dong_y'
-                ? "Lọc danh sách trạm VTT đã đồng ý..."
-                : "Lọc tất cả danh sách trạm tăng giá..."
-            }
-            value={tableSearch}
-            onChange={(e) => setTableSearch(e.target.value)}
+            value={tableToHaTangFilter}
+            onChange={(e) => setTableToHaTangFilter(e.target.value)}
             style={{
-              width: '100%',
-              maxWidth: '420px',
+              width: 'auto',
               padding: '0.5rem 0.85rem',
               fontSize: '0.85rem',
               borderRadius: 'var(--radius-md)',
               background: 'var(--bg-primary)',
               border: '1px solid var(--border-color)',
-              color: 'var(--text-main)'
+              color: 'var(--text-main)',
+              cursor: 'pointer'
             }}
-          />
+          >
+            <option value="all">🏢 Tất cả Tổ Hạ Tầng</option>
+            {toHaTangOptions.map(opt => (
+              <option key={opt} value={opt}>{opt}</option>
+            ))}
+          </select>
+
+          {/* Filter Dropdown: Site */}
+          <select
+            className="input-field"
+            value={tableSiteFilter}
+            onChange={(e) => setTableSiteFilter(e.target.value)}
+            style={{
+              width: 'auto',
+              padding: '0.5rem 0.85rem',
+              fontSize: '0.85rem',
+              borderRadius: 'var(--radius-md)',
+              background: 'var(--bg-primary)',
+              border: '1px solid var(--border-color)',
+              color: 'var(--text-main)',
+              cursor: 'pointer'
+            }}
+          >
+            <option value="all">📍 Tất cả Site</option>
+            {siteOptions.map(opt => (
+              <option key={opt} value={opt}>{opt}</option>
+            ))}
+          </select>
+
+          {/* Clear Filters Button */}
+          {(tableSearch || tableToHaTangFilter !== 'all' || tableSiteFilter !== 'all') && (
+            <button
+              className="btn btn-secondary"
+              onClick={() => {
+                setTableSearch('');
+                setTableToHaTangFilter('all');
+                setTableSiteFilter('all');
+              }}
+              style={{
+                padding: '0.45rem 0.75rem',
+                fontSize: '0.8rem',
+                borderRadius: 'var(--radius-md)',
+                background: 'rgba(239, 68, 68, 0.15)',
+                border: '1px solid rgba(239, 68, 68, 0.3)',
+                color: '#f87171',
+                cursor: 'pointer',
+                fontWeight: 600
+              }}
+            >
+              ✕ Xóa Lọc
+            </button>
+          )}
 
           {tableViewMode === 'chua_bao_cao' && (
             <span className="badge" style={{ background: 'rgba(239, 68, 68, 0.15)', color: '#f87171', border: '1px solid rgba(239, 68, 68, 0.3)', padding: '0.35rem 0.75rem', fontSize: '0.8rem' }}>
-              🔴 Đang xem <strong>{chuaBaoCaoList.length} trạm chưa làm văn bản báo cáo</strong>.
+              🔴 Đang xem <strong>{activeDisplayList.length} / {chuaBaoCaoList.length} trạm chưa làm văn bản báo cáo</strong>.
             </span>
           )}
 
           {tableViewMode === 'da_bao_cao_chua_duyet' && (
             <span className="badge" style={{ background: 'rgba(2, 132, 199, 0.15)', color: '#38bdf8', border: '1px solid rgba(2, 132, 199, 0.3)', padding: '0.35rem 0.75rem', fontSize: '0.8rem' }}>
-              🔵 Đang xem <strong>{daBaoCaoChuaDuyetList.length} trạm đã báo cáo nhưng VTT chưa duyệt</strong>.
+              🔵 Đang xem <strong>{activeDisplayList.length} / {daBaoCaoChuaDuyetList.length} trạm đã báo cáo chưa duyệt</strong>.
             </span>
           )}
 
           {tableViewMode === 'vtt_dong_y' && (
             <span className="badge" style={{ background: 'rgba(16, 185, 129, 0.15)', color: '#34d399', border: '1px solid rgba(16, 185, 129, 0.3)', padding: '0.35rem 0.75rem', fontSize: '0.8rem' }}>
-              🟢 Đang xem <strong>{vttDongYList.length} trạm VTT đã đồng ý văn bản</strong>.
+              🟢 Đang xem <strong>{activeDisplayList.length} / {vttDongYList.length} trạm VTT đã đồng ý</strong>.
             </span>
           )}
         </div>
