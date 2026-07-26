@@ -132,6 +132,8 @@ function doGet(e) {
       const donGia2026Raw = parseVnNumber(row[idxDonGia2026]);
       const deXuatT5 = parseVnNumber(row[idxDeXuatT5]);
       const deXuatT6 = parseVnNumber(row[idxDeXuatT6]);
+      const deXuatT7 = parseVnNumber(row[idxDeXuatT7]);
+      const thoiDiemTangGia = String(row[idxThoiDiem] || '').trim();
       const rawChenhLech = parseVnNumber(row[idxChenhLech]);
       const maxDeXuatPrice = Math.max(deXuatT5, deXuatT6, deXuatT7);
 
@@ -183,7 +185,6 @@ function doGet(e) {
         }
       }
 
-      const tongChiTiet2025 = parseVnNumber(row[idxTongChiTiet2025]);
       const tongChiTiet2026 = parseVnNumber(row[idxTongChiTiet2026]);
       const soThangCoTT = parseVnNumber(row[idxSoThangCoTT]);
       const tinhTrangPhapLy = String(row[idxPhapLy] || '').trim();
