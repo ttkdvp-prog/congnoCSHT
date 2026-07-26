@@ -132,6 +132,9 @@ function doGet(e) {
     const idxFileDinhKem = findColIdxPattern(['file', 'file đính kèm', 'link văn bản', 'file báo cáo', 'link file', 'file văn bản']);
     const idxGhiChu = findColIdx('ghi chú');
 
+    const idxUpTien = findColIdxPattern(['up tiền', 'up tien', 'tiền up', 'số tiền up', 'up_tiền']);
+    const idxUpSoThang = findColIdxPattern(['up số tháng thanh toán', 'up so thang thanh toan', 'up số tháng', 'up so thang', 'số tháng up', 'tháng up', 'up_tháng']);
+
     const records = [];
     for (let i = 1; i < data.length; i++) {
       const row = data[i];
@@ -273,7 +276,9 @@ function doGet(e) {
         baoCaoVTT: baoCaoVTT,
         diaChiDoiTac: diaChiDoiTac,
         fileDinhKem: fileDinhKem,
-        ghiChu: ghiChu
+        ghiChu: ghiChu,
+        upTien: idxUpTien !== -1 ? parseVnNumber(row[idxUpTien]) : 0,
+        upSoThang: idxUpSoThang !== -1 ? String(row[idxUpSoThang] || '').trim() : ''
       });
     }
 
@@ -341,11 +346,31 @@ function doPost(e) {
           return normalizeStr(h).indexOf(pattern.toLowerCase()) !== -1;
         });
       };
+      var findMainColIdxPattern = function(patterns) {
+        for (var p = 0; p < patterns.length; p++) {
+          var idx = findMainColIdx(patterns[p]);
+          if (idx !== -1) return idx;
+        }
+        return -1;
+      };
       
       var idxMaCSHTMain = findMainColIdx('mã csht');
-      var idxDaTT2026Main = findMainColIdx('đã thanh toán 2026');
-      var idxPhapLyMain = findMainColIdx('tình trạng pháp lý');
-      var idxGhiChuMain = findMainColIdx('ghi chú');
+      var idxUpTienMain = findMainColIdxPattern(['up tiền', 'up tien', 'tiền up', 'số tiền up', 'up_tiền']);
+      var idxUpSoThangMain = findMainColIdxPattern(['up số tháng thanh toán', 'up so thang thanh toan', 'up số tháng', 'up so thang', 'số tháng up', 'tháng up', 'up_tháng']);
+
+      // Automatically create columns 'up tiền' and 'up số tháng thanh toán' in 'Theo dõi đầy đủ' if missing
+      if (sheetMain && mainHeaders.length > 0) {
+        if (idxUpTienMain === -1) {
+          mainHeaders.push('up tiền');
+          sheetMain.getRange(1, mainHeaders.length).setValue('up tiền');
+          idxUpTienMain = mainHeaders.length - 1;
+        }
+        if (idxUpSoThangMain === -1) {
+          mainHeaders.push('up số tháng thanh toán');
+          sheetMain.getRange(1, mainHeaders.length).setValue('up số tháng thanh toán');
+          idxUpSoThangMain = mainHeaders.length - 1;
+        }
+      }
 
       for (var r = 0; r < upRows.length; r++) {
         var rowItem = upRows[r];
@@ -360,22 +385,26 @@ function doPost(e) {
           sheetUp.appendRow([lastRowUp, maCSHT, soTien, soThang, tinhTrang, ghiChu]);
           addedCount++;
 
-          // Synchronize back to 'Theo dõi đầy đủ' sheet for matching station
+          // Synchronize ONLY 'up tiền' and 'up số tháng thanh toán' back to 'Theo dõi đầy đủ' sheet
           if (sheetMain && idxMaCSHTMain !== -1) {
             for (var m = 1; m < mainData.length; m++) {
               if (String(mainData[m][idxMaCSHTMain]).trim().toLowerCase() === maCSHT.toLowerCase()) {
                 var targetRowIndex = m + 1;
-                if (soTien > 0 && idxDaTT2026Main !== -1) {
-                  var currentVal = parseVnNumber(mainData[m][idxDaTT2026Main]);
-                  sheetMain.getRange(targetRowIndex, idxDaTT2026Main + 1).setValue(currentVal + parseVnNumber(soTien));
+                
+                // 1. Update ONLY 'up tiền'
+                if (idxUpTienMain !== -1 && parseVnNumber(soTien) > 0) {
+                  var currentUpTien = parseVnNumber(mainData[m][idxUpTienMain]);
+                  var newUpTien = currentUpTien + parseVnNumber(soTien);
+                  sheetMain.getRange(targetRowIndex, idxUpTienMain + 1).setValue(newUpTien);
+                  mainData[m][idxUpTienMain] = newUpTien;
                 }
-                if (tinhTrang && idxPhapLyMain !== -1) {
-                  sheetMain.getRange(targetRowIndex, idxPhapLyMain + 1).setValue(tinhTrang);
-                }
-                if (ghiChu && idxGhiChuMain !== -1) {
-                  var oldGhiChu = String(mainData[m][idxGhiChuMain] || '');
-                  var newGhiChu = oldGhiChu ? (oldGhiChu + '; ' + ghiChu) : ghiChu;
-                  sheetMain.getRange(targetRowIndex, idxGhiChuMain + 1).setValue(newGhiChu);
+
+                // 2. Update ONLY 'up số tháng thanh toán'
+                if (idxUpSoThangMain !== -1 && soThang) {
+                  var oldUpSoThang = String(mainData[m][idxUpSoThangMain] || '').trim();
+                  var newUpSoThang = oldUpSoThang ? (oldUpSoThang + '; ' + soThang) : soThang;
+                  sheetMain.getRange(targetRowIndex, idxUpSoThangMain + 1).setValue(newUpSoThang);
+                  mainData[m][idxUpSoThangMain] = newUpSoThang;
                 }
                 break;
               }
@@ -386,7 +415,7 @@ function doPost(e) {
 
       return jsonResponse({
         status: 'success',
-        message: 'Đã upload thành công ' + addedCount + ' dòng dữ liệu thanh toán vào sheet "up"!',
+        message: 'Đã upload thành công ' + addedCount + ' dòng vào sheet "up" và cập nhật cột "up tiền", "up số tháng thanh toán" trên sheet "Theo dõi đầy đủ"!',
         addedCount: addedCount
       });
     }
