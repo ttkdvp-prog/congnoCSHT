@@ -215,7 +215,7 @@ export default function EditPriceModal({ station, isOpen, onClose, onSave, isSav
 
             <button type="submit" className="btn btn-amber" disabled={isSaving}>
               {isSaving ? <Upload className="animate-spin" size={16} /> : <Save size={16} />}
-              <span>{isSaving ? 'Đang đồng bộ...' : 'Lưu & Đồng bộ về Google Sheet'}</span>
+              <span>{isSaving ? 'Đang đồng bộ...' : 'Lưu & Đồng Bộ Về Hệ Thống'}</span>
             </button>
           </div>
 

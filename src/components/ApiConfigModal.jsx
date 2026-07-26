@@ -26,20 +26,20 @@ export default function ApiConfigModal({ isOpen, onClose, currentUrl, onSaveUrl,
       const data = await res.json();
 
       if (data && data.status === 'success') {
-        setTestResult({ success: true, message: `Kết nối thành công! Đã tải ${data.total} trạm từ Google Sheet.` });
+        setTestResult({ success: true, message: `Kết nối thành công! Đã tải ${data.total} trạm từ Hệ Thống Dữ Liệu.` });
         onSaveUrl(inputUrl.trim());
       } else {
-        setTestResult({ success: false, message: data.message || 'Phản hồi từ Google Apps Script không đúng định dạng.' });
+        setTestResult({ success: false, message: data.message || 'Phản hồi từ Máy Chủ API không đúng định dạng.' });
       }
     } catch (err) {
-      setTestResult({ success: false, message: 'Không thể kết nối đến URL Apps Script này. Vui lòng kiểm tra quyền truy cập (Anyone/Bất kỳ ai).' });
+      setTestResult({ success: false, message: 'Không thể kết nối đến URL Máy Chủ API này. Vui lòng kiểm tra quyền truy cập (Anyone/Bất kỳ ai).' });
     } finally {
       setTesting(false);
     }
   };
 
   const handleCopyGASCode = () => {
-    navigator.clipboard.writeText(`// Mở Google Sheet -> Tiện ích mở rộng -> Apps Script -> Dán mã từ file google_apps_script.js -> Triển khai dưới dạng Ứng dụng web (Web App) -> Quyền truy cập: Bất kỳ ai (Anyone).`);
+    navigator.clipboard.writeText(`// Mở Trang Dữ Liệu Gốc -> Tiện ích mở rộng -> Apps Script -> Dán mã từ file google_apps_script.js -> Triển khai dưới dạng Ứng dụng web (Web App) -> Quyền truy cập: Bất kỳ ai (Anyone).`);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
@@ -56,10 +56,10 @@ export default function ApiConfigModal({ isOpen, onClose, currentUrl, onSaveUrl,
             </div>
             <div>
               <h3 style={{ fontSize: '1.1rem', fontWeight: 800, color: 'var(--text-main)' }}>
-                CẤU HÌNH KẾT NỐI GOOGLE APPS SCRIPT WEB APP
+                CẤU HÌNH KẾT NỐI MÁY CHỦ API DỮ LIỆU
               </h3>
               <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
-                Đồng bộ dữ liệu realtime 2 chiều với Google Sheets
+                Đồng bộ dữ liệu realtime 2 chiều với Hệ Thống
               </p>
             </div>
           </div>
@@ -74,7 +74,7 @@ export default function ApiConfigModal({ isOpen, onClose, currentUrl, onSaveUrl,
           
           <div style={{ marginBottom: '1.25rem' }}>
             <label style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-main)', display: 'block', marginBottom: '0.5rem' }}>
-              Google Apps Script Web App URL:
+              URL Máy Chủ API Dữ Liệu:
             </label>
             <input
               type="text"
@@ -106,10 +106,10 @@ export default function ApiConfigModal({ isOpen, onClose, currentUrl, onSaveUrl,
           <div style={{ background: 'var(--bg-surface)', padding: '1rem', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-color)', marginBottom: '1.5rem' }}>
             <h4 style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--accent-blue)', marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
               <HelpCircle size={16} />
-              HƯỚNG DẪN TẠO GOOGLE APPS SCRIPT WEB APP:
+              HƯỚNG DẪN TẠO KẾT NỐI MÁY CHỦ API:
             </h4>
             <ol style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', paddingLeft: '1.25rem', lineHeight: 1.6 }}>
-              <li>Mở Google Sheet: <a href="https://docs.google.com/spreadsheets/d/1zwXiZKDCN14Rx3LOVEI54JYvABMXz2TDH3w_Rv8bu7c/edit?gid=1957057365#gid=1957057365" target="_blank" rel="noreferrer" style={{ color: 'var(--accent-blue)' }}>Mở Google Sheet <ExternalLink size={12} /></a></li>
+              <li>Mở Trang Dữ Liệu Gốc: <a href="https://docs.google.com/spreadsheets/d/1zwXiZKDCN14Rx3LOVEI54JYvABMXz2TDH3w_Rv8bu7c/edit?gid=1957057365#gid=1957057365" target="_blank" rel="noreferrer" style={{ color: 'var(--accent-blue)' }}>Mở Bảng Dữ Liệu Gốc <ExternalLink size={12} /></a></li>
               <li>Vào <strong>Extensions (Tiện ích mở rộng)</strong> -&gt; <strong>Apps Script</strong>.</li>
               <li>Sao chép toàn bộ mã từ file <code style={{ color: '#fbbf24' }}>google_apps_script.js</code> trong thư mục dự án và dán vào Apps Script editor.</li>
               <li>Nhấn <strong>Deploy (Triển khai)</strong> -&gt; <strong>New Deployment (Triển khai mới)</strong> -&gt; Chọn loại <strong>Web app</strong>.</li>

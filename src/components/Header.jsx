@@ -62,10 +62,10 @@ export default function Header({
               cursor: 'pointer',
               boxShadow: isLive ? undefined : '0 0 12px rgba(245, 158, 11, 0.3)'
             }}
-            title="Nhấn vào đây để dán URL Google Apps Script Web App"
+            title="Nhấn vào đây để dán URL Máy Chủ API Dữ Liệu"
           >
             {isLive ? <Radio size={15} className="animate-pulse" /> : <AlertTriangle size={15} />}
-            <span>{isLive ? 'Live Sync (Đã kết nối Google Sheet)' : '⚠️ Offline Data (Bấm để kết nối Google Sheet)'}</span>
+            <span>{isLive ? 'Live Sync (Đã kết nối Máy Chủ)' : '⚠️ Offline Data (Bấm để kết nối Máy Chủ)'}</span>
           </div>
 
           {/* Instant Auto-Sync Controls */}
@@ -103,7 +103,7 @@ export default function Header({
                     fontWeight: 600,
                     cursor: 'pointer'
                   }}
-                  title="Chọn tốc độ đồng bộ ngầm với Google Sheet"
+                  title="Chọn tốc độ đồng bộ ngầm với Máy Chủ"
                 >
                   <option value={2000}>⚡ 2 giây (Siêu Tốc)</option>
                   <option value={3000}>⚡ 3 giây (Khuyên dùng)</option>
@@ -114,7 +114,7 @@ export default function Header({
             </div>
           )}
 
-          <button className="btn btn-secondary" onClick={onRefresh} title="Cập nhật ngay lập tức từ Google Sheet">
+          <button className="btn btn-secondary" onClick={onRefresh} title="Cập nhật ngay lập tức từ Máy Chủ">
             <RefreshCw size={16} />
             <span>Làm mới</span>
           </button>

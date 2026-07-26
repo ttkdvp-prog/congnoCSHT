@@ -381,14 +381,14 @@ export default function App() {
         });
         const resData = await res.json();
         if (resData && resData.status === 'success') {
-          setToastMessage({ type: 'success', text: `✅ Đã lưu và cập nhật trực tiếp lên Google Sheet cho trạm ${updatedStation.maCSHT}!` });
+          setToastMessage({ type: 'success', text: `✅ Đã lưu và cập nhật trực tiếp về Hệ Thống cho trạm ${updatedStation.maCSHT}!` });
         } else {
-          setToastMessage({ type: 'warning', text: `⚠️ Ứng dụng đã cập nhật giao diện nhưng Google Apps Script phản hồi: ${resData.message || 'Lỗi lưu'}` });
+          setToastMessage({ type: 'warning', text: `⚠️ Ứng dụng đã cập nhật giao diện nhưng Máy Chủ phản hồi: ${resData.message || 'Lỗi lưu'}` });
         }
       } else {
         setToastMessage({
           type: 'warning',
-          text: `⚠️ Bạn vừa sửa dữ liệu trạm ${updatedStation.maCSHT} ở chế độ Offline. Để sửa trực tiếp trên Google Sheet, vui lòng dán URL Google Apps Script!`
+          text: `⚠️ Bạn vừa sửa dữ liệu trạm ${updatedStation.maCSHT} ở chế độ Offline. Để sửa trực tiếp về Hệ Thống, vui lòng dán URL API Dữ Liệu!`
         });
       }
       setEditingStation(null);
@@ -397,7 +397,7 @@ export default function App() {
       console.error('Error saving station data:', err);
       setToastMessage({ 
         type: 'success', 
-        text: `✅ Đã lưu và cập nhật dữ liệu trạm ${updatedStation.maCSHT} trên Web Dashboard! (Gợi ý: Dán Link Google Drive/OneDrive để đồng bộ file nặng mượt nhất).` 
+        text: `✅ Đã lưu và cập nhật dữ liệu trạm ${updatedStation.maCSHT} trên Web Dashboard! (Gợi ý: Dán Link Drive/OneDrive để đồng bộ file nặng mượt nhất).` 
       });
       setEditingStation(null);
       setEditingPriceStation(null);
@@ -550,12 +550,12 @@ export default function App() {
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
                 <AlertTriangle size={20} style={{ flexShrink: 0 }} />
                 <div>
-                  <strong>⚠️ Chế độ Offline Data:</strong> Bạn chưa kết nối Google Apps Script API nên dữ liệu khi sửa chỉ lưu tạm trên trình duyệt và <u>chưa sửa trực tiếp trên Google Sheet</u>.
+                  <strong>⚠️ Chế độ Offline Data:</strong> Bạn chưa kết nối API Máy Chủ nên dữ liệu khi sửa chỉ lưu tạm trên trình duyệt và <u>chưa sửa trực tiếp về Hệ Thống Dữ Liệu</u>.
                 </div>
               </div>
               <button className="btn btn-amber" onClick={() => setIsConfigOpen(true)} style={{ padding: '0.4rem 0.85rem', fontSize: '0.8rem' }}>
                 <Settings size={14} />
-                <span>Kết nối Google Sheet ngay</span>
+                <span>Kết nối Máy Chủ API ngay</span>
               </button>
             </div>
           )}

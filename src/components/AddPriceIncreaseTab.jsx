@@ -140,7 +140,7 @@ export default function AddPriceIncreaseTab({ data, onSaveStation, isSaving }) {
     } catch (e) {}
 
     // 5. Fallback: Text label or custom message
-    alert(`Văn bản đính kèm trạm ${station?.maCSHT || ''}:\n"${url}"\n\n📌 Gợi ý: Hãy dán Link Google Drive/OneDrive vào ô đính kèm để xem 1-click từ mọi thiết bị!`);
+    alert(`Văn bản đính kèm trạm ${station?.maCSHT || ''}:\n"${url}"\n\n📌 Gợi ý: Hãy dán Link Drive/OneDrive vào ô đính kèm để xem 1-click từ mọi thiết bị!`);
   };
 
   // Remove a file from recent shared suggestions list
@@ -371,7 +371,7 @@ export default function AddPriceIncreaseTab({ data, onSaveStation, isSaving }) {
               NHẬP & CẬP NHẬT TRẠM TĂNG GIÁ CSHT
             </h2>
             <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
-              Tìm kiếm trạm theo Mã CSHT / Tên trạm, nhập đơn giá mới, địa chỉ đối tác, tiến độ báo cáo VTT, đính kèm file văn bản và tự động đồng bộ lên Google Sheet.
+              Tìm kiếm trạm theo Mã CSHT / Tên trạm, nhập đơn giá mới, địa chỉ đối tác, tiến độ báo cáo VTT, đính kèm file văn bản và tự động đồng bộ về Hệ Thống Dữ Liệu.
             </p>
           </div>
         </div>
@@ -824,7 +824,7 @@ export default function AddPriceIncreaseTab({ data, onSaveStation, isSaving }) {
                   <input
                     type="text"
                     className="input-field"
-                    placeholder="Dán Link Google Drive/OneDrive để đồng bộ mượt nhất..."
+                    placeholder="Dán Link Drive/OneDrive để đồng bộ mượt nhất..."
                     value={fileDinhKem}
                     onChange={(e) => {
                       setFileDinhKem(e.target.value);
@@ -933,7 +933,7 @@ export default function AddPriceIncreaseTab({ data, onSaveStation, isSaving }) {
               }}
             >
               <Save size={18} />
-              <span>{isSaving ? 'Đang Lưu...' : 'Lưu & Đẩy Dữ Liệu Lên Google Sheet'}</span>
+              <span>{isSaving ? 'Đang Lưu...' : 'Lưu & Đồng Bộ Dữ Liệu Hệ Thống'}</span>
             </button>
           </form>
         </div>

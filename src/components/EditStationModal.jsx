@@ -107,7 +107,7 @@ export default function EditStationModal({ station, isOpen, onClose, onSave, isS
                 NHẬP LIỆU & CẬP NHẬT TRẠM CSHT: {station.maCSHT}
               </h3>
               <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
-                Tên trạm: {station.tenCSHT} • Dữ liệu sẽ tự động sửa trực tiếp trên Google Sheet
+                Tên trạm: {station.tenCSHT} • Dữ liệu sẽ tự động sửa trực tiếp trên Hệ Thống Dữ Liệu
               </p>
             </div>
           </div>
@@ -476,7 +476,7 @@ export default function EditStationModal({ station, isOpen, onClose, onSave, isS
 
             <button type="submit" className="btn btn-primary" disabled={isSaving}>
               {isSaving ? <Upload className="animate-spin" size={16} /> : <Save size={16} />}
-              <span>{isSaving ? 'Đang cập nhật...' : 'Cập Nhật & Lưu Về Google Sheet'}</span>
+              <span>{isSaving ? 'Đang cập nhật...' : 'Cập Nhật & Lưu Về Hệ Thống'}</span>
             </button>
           </div>
 
