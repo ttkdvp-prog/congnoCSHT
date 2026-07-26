@@ -54,18 +54,17 @@ export default function Header({
               gap: '0.5rem',
               padding: '0.45rem 0.85rem',
               borderRadius: '9999px',
-              background: isLive ? 'rgba(16, 185, 129, 0.15)' : 'rgba(245, 158, 11, 0.25)',
-              border: isLive ? '1px solid rgba(16, 185, 129, 0.4)' : '1px solid #f59e0b',
-              color: isLive ? '#34d399' : '#fbbf24',
+              background: 'rgba(16, 185, 129, 0.15)',
+              border: '1px solid rgba(16, 185, 129, 0.4)',
+              color: '#34d399',
               fontSize: '0.8rem',
               fontWeight: 700,
-              cursor: 'pointer',
-              boxShadow: isLive ? undefined : '0 0 12px rgba(245, 158, 11, 0.3)'
+              cursor: 'pointer'
             }}
-            title="Nhấn vào đây để dán URL Máy Chủ API Dữ Liệu"
+            title="Nhấn vào đây để xem URL Máy Chủ API Dữ Liệu"
           >
-            {isLive ? <Radio size={15} className="animate-pulse" /> : <AlertTriangle size={15} />}
-            <span>{isLive ? 'Live Sync (Đã kết nối Máy Chủ)' : '⚠️ Offline Data (Bấm để kết nối Máy Chủ)'}</span>
+            <Radio size={15} className="animate-pulse" />
+            <span>Live Sync (Đã kết nối Máy Chủ)</span>
           </div>
 
           {/* Instant Auto-Sync Controls */}

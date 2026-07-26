@@ -22,7 +22,7 @@ import { AlertTriangle, Settings, Download } from 'lucide-react';
 export default function App() {
   const DEFAULT_GAS_URL = 'https://script.google.com/macros/s/AKfycbx14yyyw2fJ4rW3OdxcfOlli8OKPlr84-vxEhPkI9yMcTnM2BT8WeDs75hzx9h0mEPs/exec';
   const [apiUrl, setApiUrl] = useState(() => localStorage.getItem('csht_apps_script_url') || DEFAULT_GAS_URL);
-  const [isLive, setIsLive] = useState(false);
+  const [isLive, setIsLive] = useState(true);
   const [isLoading, setIsLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [toastMessage, setToastMessage] = useState(null);
@@ -70,55 +70,33 @@ export default function App() {
     const str = String(val).trim();
     if (!str) return '';
 
-    if (str.includes('GMT') || str.includes('Giờ') || /\b(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\b/i.test(str)) {
-      const d = new Date(str);
-      if (!isNaN(d.getTime())) {
-        const month = d.getMonth() + 1;
-        const year = d.getFullYear();
-        const date = d.getDate();
-        if (date === 1) {
-          return `Tháng ${month}/${year}`;
-        }
-        return `${date < 10 ? '0' + date : date}/${month < 10 ? '0' + month : month}/${year}`;
-      }
-    }
-
     if (/^\d{4}-\d{2}-\d{2}/.test(str)) {
-      const d = new Date(str);
-      if (!isNaN(d.getTime())) {
-        const month = d.getMonth() + 1;
-        const year = d.getFullYear();
-        return `Tháng ${month}/${year}`;
+      const dateObj = new Date(str);
+      if (!isNaN(dateObj.getTime())) {
+        const dd = String(dateObj.getDate()).padStart(2, '0');
+        const mm = String(dateObj.getMonth() + 1).padStart(2, '0');
+        const yyyy = dateObj.getFullYear();
+        return `${dd}/${mm}/${yyyy}`;
       }
     }
-
     return str;
   };
 
-  // Helper to sanitize & recalculate 2026 debt fields on frontend
-  const processStationRecords = (records) => {
-    if (!Array.isArray(records)) return [];
-    return records.map(row => {
+  // Process raw records from local JSON or Google Apps Script API
+  const processStationRecords = (recordsList) => {
+    if (!Array.isArray(recordsList)) return [];
+
+    return recordsList.map(row => {
       const donGia2025 = row.donGia2025 || 0;
-      const donGia2026Raw = row.donGia2026 || 0;
-      const deXuatT5 = row.deXuatT5 || 0;
-      const deXuatT6 = row.deXuatT6 || 0;
-      const deXuatT7 = row.deXuatT7 || 0;
-      const rawChenhLech = row.chenhLechDonGia || 0;
 
-      const maxDeXuatPrice = Math.max(deXuatT5, deXuatT6, deXuatT7);
+      let donGia2026Effective = row.donGia2026 || 0;
+      const t5 = row.deXuatT5 || 0;
+      const t6 = row.deXuatT6 || 0;
+      const t7 = row.deXuatT7 || 0;
+      const maxDeXuat = Math.max(t5, t6, t7);
 
-      let donGia2026Effective = 0;
-      if (maxDeXuatPrice > donGia2025 && maxDeXuatPrice > 0) {
-        donGia2026Effective = maxDeXuatPrice;
-      } else if (donGia2026Raw > donGia2025 && donGia2025 > 0) {
-        donGia2026Effective = donGia2026Raw;
-      } else if (rawChenhLech > 0 && donGia2025 > 0) {
-        donGia2026Effective = donGia2025 + rawChenhLech;
-      } else if (donGia2026Raw > 0) {
-        donGia2026Effective = donGia2026Raw;
-      } else {
-        donGia2026Effective = donGia2025;
+      if (maxDeXuat > donGia2026Effective) {
+        donGia2026Effective = maxDeXuat;
       }
 
       const chenhLechDonGia = (donGia2026Effective > donGia2025 && donGia2025 > 0) ? (donGia2026Effective - donGia2025) : 0;
@@ -196,17 +174,17 @@ export default function App() {
         setIsLive(true);
       } else {
         if (urlToUse !== DEFAULT_GAS_URL) {
+          setApiUrl(DEFAULT_GAS_URL);
+          try { localStorage.setItem('csht_apps_script_url', DEFAULT_GAS_URL); } catch(e){}
           fetchDataFromGAS(DEFAULT_GAS_URL, isSilent);
-        } else {
-          setIsLive(false);
         }
       }
     } catch (err) {
-      console.warn('Cannot fetch from Apps Script API, retrying with default URL...', err);
+      console.warn('Cannot fetch from Apps Script API, auto-reconnecting...', err);
       if (urlToUse !== DEFAULT_GAS_URL) {
+        setApiUrl(DEFAULT_GAS_URL);
+        try { localStorage.setItem('csht_apps_script_url', DEFAULT_GAS_URL); } catch(e){}
         fetchDataFromGAS(DEFAULT_GAS_URL, isSilent);
-      } else {
-        setIsLive(false);
       }
     } finally {
       if (!isSilent) setIsLoading(false);
@@ -627,35 +605,6 @@ export default function App() {
 
         {/* Right Main Content Area */}
         <div className="main-content-wrapper">
-
-          {/* Offline Alert Banner */}
-          {!isLive && (
-            <div style={{
-              background: 'rgba(245, 158, 11, 0.15)',
-              border: '1px solid #f59e0b',
-              borderRadius: 'var(--radius-md)',
-              padding: '0.875rem 1.25rem',
-              marginBottom: '1.5rem',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              flexWrap: 'wrap',
-              gap: '0.75rem',
-              color: '#fbbf24',
-              fontSize: '0.85rem'
-            }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                <AlertTriangle size={20} style={{ flexShrink: 0 }} />
-                <div>
-                  <strong>⚠️ Chế độ Offline Data:</strong> Bạn chưa kết nối API Máy Chủ nên dữ liệu khi sửa chỉ lưu tạm trên trình duyệt và <u>chưa sửa trực tiếp về Hệ Thống Dữ Liệu</u>.
-                </div>
-              </div>
-              <button className="btn btn-amber" onClick={() => setIsConfigOpen(true)} style={{ padding: '0.4rem 0.85rem', fontSize: '0.8rem' }}>
-                <Settings size={14} />
-                <span>Kết nối Máy Chủ API ngay</span>
-              </button>
-            </div>
-          )}
 
           {/* Toast Notification Banner */}
           {toastMessage && (
