@@ -1,12 +1,26 @@
-import React, { useState } from 'react';
-import { UploadCloud, FileSpreadsheet, Download, CheckCircle, AlertCircle, Plus, Trash2, RefreshCw, Layers } from 'lucide-react';
+import React, { useState, useEffect, useMemo } from 'react';
+import { UploadCloud, FileSpreadsheet, Download, CheckCircle, AlertCircle, Plus, Trash2, RefreshCw, Layers, Search, FileText, CheckCircle2, History, ListFilter } from 'lucide-react';
 import * as XLSX from 'xlsx';
 
 export default function UploadPaymentTab({ stationsData, apiUrl, onRefreshData }) {
+  // Pending rows parsed from Excel or Manual Form before upload
   const [parsedRows, setParsedRows] = useState([]);
   const [fileName, setFileName] = useState('');
   const [isUploading, setIsUploading] = useState(false);
   const [uploadMessage, setUploadMessage] = useState(null);
+
+  // Batch uploaded in current session (Biểu 1: Đợt Vừa Upload)
+  const [lastUploadedBatch, setLastUploadedBatch] = useState([]);
+  const [lastUploadTime, setLastUploadTime] = useState('');
+
+  // All historical records fetched from Sheet 'up' (Biểu 2: Toàn Bộ Sheet 'up')
+  const [allUpSheetRecords, setAllUpSheetRecords] = useState([]);
+  const [isLoadingHistory, setIsLoadingHistory] = useState(false);
+  const [historySearch, setHistorySearch] = useState('');
+  const [statusFilter, setStatusFilter] = useState('all');
+
+  // Sub-Tab View Mode: 'pending' | 'last_batch' | 'all_sheet_up'
+  const [activeSubView, setActiveSubView] = useState('pending');
 
   // Manual Quick Input Form State
   const [manualMaCSHT, setManualMaCSHT] = useState('');
@@ -22,6 +36,28 @@ export default function UploadPaymentTab({ stationsData, apiUrl, onRefreshData }
     if (isNaN(num)) return '0 ₫';
     return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(num);
   };
+
+  // Fetch all historical records from Sheet 'up' via Apps Script API
+  const fetchUpSheetHistory = async () => {
+    if (!apiUrl) return;
+    setIsLoadingHistory(true);
+    try {
+      const endpoint = apiUrl + (apiUrl.includes('?') ? '&' : '?') + 'action=getUpData&_t=' + Date.now();
+      const res = await fetch(endpoint);
+      const result = await res.json();
+      if (result && result.status === 'success' && Array.isArray(result.data)) {
+        setAllUpSheetRecords(result.data);
+      }
+    } catch (err) {
+      console.warn('Could not fetch sheet up history:', err);
+    } finally {
+      setIsLoadingHistory(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchUpSheetHistory();
+  }, [apiUrl]);
 
   // 1. Download Sample Excel Template for Sheet 'up'
   const handleDownloadTemplate = () => {
@@ -53,7 +89,6 @@ export default function UploadPaymentTab({ stationsData, apiUrl, onRefreshData }
     ];
 
     const ws = XLSX.utils.json_to_sheet(templateData);
-    // Set column widths
     ws['!cols'] = [
       { wch: 6 },
       { wch: 20 },
@@ -89,7 +124,6 @@ export default function UploadPaymentTab({ stationsData, apiUrl, onRefreshData }
           return;
         }
 
-        // Normalize column headers to match Sheet 'up' fields
         const formatted = rawJson.map((row, idx) => {
           const getVal = (patterns) => {
             for (const key of Object.keys(row)) {
@@ -120,6 +154,7 @@ export default function UploadPaymentTab({ stationsData, apiUrl, onRefreshData }
         }).filter(r => r.maCSHT !== '');
 
         setParsedRows(formatted);
+        setActiveSubView('pending');
       } catch (err) {
         console.error('Error parsing excel:', err);
         alert('Có lỗi khi đọc file Excel. Vui lòng kiểm tra định dạng file!');
@@ -153,14 +188,10 @@ export default function UploadPaymentTab({ stationsData, apiUrl, onRefreshData }
     setManualSoTien('');
     setManualSoThang('');
     setManualGhiChu('');
+    setActiveSubView('pending');
   };
 
-  // 4. Remove a row from Preview Table
-  const handleRemoveRow = (id) => {
-    setParsedRows(prev => prev.filter(r => r.id !== id));
-  };
-
-  // 5. Submit Parsed Rows to Google Apps Script (Sheet 'up')
+  // 4. Submit Parsed Rows to Google Apps Script (Sheet 'up')
   const handleSyncToGoogleSheets = async () => {
     if (parsedRows.length === 0) {
       alert('Không có dữ liệu để tải lên!');
@@ -175,25 +206,40 @@ export default function UploadPaymentTab({ stationsData, apiUrl, onRefreshData }
     setIsUploading(true);
     setUploadMessage(null);
 
+    const rowsToUpload = [...parsedRows];
+
     try {
       const res = await fetch(apiUrl, {
         method: 'POST',
         headers: { 'Content-Type': 'text/plain' },
         body: JSON.stringify({
           action: 'uploadSheetUp',
-          rows: parsedRows
+          rows: rowsToUpload
         })
       });
 
       const data = await res.json();
 
       if (data && data.status === 'success') {
+        // Save to last uploaded batch (Biểu 1)
+        setLastUploadedBatch(rowsToUpload);
+        setLastUploadTime(new Date().toLocaleTimeString('vi-VN') + ' - ' + new Date().toLocaleDateString('vi-VN'));
+
         setUploadMessage({
           type: 'success',
-          text: `🎉 ${data.message || `Đã tải thành công ${parsedRows.length} dòng lên Google Sheet (Sheet 'up')!`}`
+          text: `🎉 ${data.message || `Đã tải thành công ${rowsToUpload.length} dòng lên Google Sheet (Sheet 'up')!`}`
         });
+
+        // Clear pending rows
         setParsedRows([]);
         setFileName('');
+
+        // Switch automatically to Biểu 1: vừa upload
+        setActiveSubView('last_batch');
+
+        // Fetch refreshed allSheetUp history (Biểu 2)
+        fetchUpSheetHistory();
+
         if (onRefreshData) onRefreshData();
       } else {
         setUploadMessage({
@@ -212,7 +258,56 @@ export default function UploadPaymentTab({ stationsData, apiUrl, onRefreshData }
     }
   };
 
-  const totalPaymentSum = parsedRows.reduce((sum, r) => sum + (r.soTienThanhToan || 0), 0);
+  // 5. Excel Exporters
+  const exportBatchToExcel = (list, sheetName, fileNamePrefix) => {
+    if (!list || list.length === 0) {
+      alert('Không có dữ liệu để xuất Excel.');
+      return;
+    }
+
+    const exportRows = list.map((item, idx) => ({
+      'STT': idx + 1,
+      'Mã CSHT': item.maCSHT || '',
+      'Số tiền thanh toán (VNĐ)': item.soTienThanhToan || 0,
+      'Số tháng thanh toán': item.soThangThanhToan || '',
+      'Tình trạng': item.tinhTrang || '',
+      'Ghi chú': item.ghiChu || ''
+    }));
+
+    const ws = XLSX.utils.json_to_sheet(exportRows);
+    ws['!cols'] = [
+      { wch: 6 },
+      { wch: 20 },
+      { wch: 24 },
+      { wch: 24 },
+      { wch: 24 },
+      { wch: 35 }
+    ];
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, sheetName);
+    XLSX.writeFile(wb, `${fileNamePrefix}_${new Date().toISOString().slice(0, 10)}.xlsx`);
+  };
+
+  // Filtered List for Biểu 2: Toàn Bộ Sheet 'up'
+  const filteredAllUpRecords = useMemo(() => {
+    let list = [...allUpSheetRecords];
+    if (statusFilter !== 'all') {
+      list = list.filter(r => String(r.tinhTrang || '').toLowerCase().includes(statusFilter.toLowerCase()));
+    }
+    if (historySearch.trim()) {
+      const q = historySearch.toLowerCase().trim();
+      list = list.filter(r =>
+        String(r.maCSHT || '').toLowerCase().includes(q) ||
+        String(r.ghiChu || '').toLowerCase().includes(q) ||
+        String(r.tinhTrang || '').toLowerCase().includes(q)
+      );
+    }
+    return list;
+  }, [allUpSheetRecords, historySearch, statusFilter]);
+
+  const pendingSum = parsedRows.reduce((sum, r) => sum + (Number(r.soTienThanhToan) || 0), 0);
+  const lastBatchSum = lastUploadedBatch.reduce((sum, r) => sum + (Number(r.soTienThanhToan) || 0), 0);
+  const allUpSum = filteredAllUpRecords.reduce((sum, r) => sum + (Number(r.soTienThanhToan) || 0), 0);
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
@@ -235,22 +330,35 @@ export default function UploadPaymentTab({ stationsData, apiUrl, onRefreshData }
             </div>
             <div>
               <h2 style={{ fontSize: '1.2rem', fontWeight: 800, color: '#22d3ee' }}>
-                UPLOAD SỐ LIỆU THANH TOÁN (LƯU VÀO SHEET "UP")
+                QUẢN LÝ & UPLOAD SỐ LIỆU THANH TOÁN (SHEET "UP")
               </h2>
               <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
-                Tải lên file Excel danh sách các trạm CSHT đã thanh toán để lưu trực tiếp vào tab <strong>Sheet 'up'</strong> trên Google Sheets & cập nhật Web App
+                Tải lên file Excel, quản lý chi tiết đợt vừa upload và rà soát toàn bộ lịch sử thanh toán trên Google Sheet <strong>'up'</strong>
               </p>
             </div>
           </div>
 
-          <button
-            className="btn btn-secondary"
-            onClick={handleDownloadTemplate}
-            style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontWeight: 700, borderColor: '#06b6d4', color: '#22d3ee' }}
-          >
-            <Download size={16} />
-            <span>Tải File Excel Mẫu (.xlsx)</span>
-          </button>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
+            <button
+              className="btn btn-secondary"
+              onClick={fetchUpSheetHistory}
+              disabled={isLoadingHistory}
+              style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
+              title="Tải lại toàn bộ dữ liệu từ Sheet 'up'"
+            >
+              <RefreshCw size={16} className={isLoadingHistory ? 'animate-spin' : ''} />
+              <span>Tải Lại Sheet Up</span>
+            </button>
+
+            <button
+              className="btn btn-secondary"
+              onClick={handleDownloadTemplate}
+              style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontWeight: 700, borderColor: '#06b6d4', color: '#22d3ee' }}
+            >
+              <Download size={16} />
+              <span>Tải File Excel Mẫu (.xlsx)</span>
+            </button>
+          </div>
         </div>
       </div>
 
@@ -398,118 +506,362 @@ export default function UploadPaymentTab({ stationsData, apiUrl, onRefreshData }
         </div>
       )}
 
-      {/* Preview Table & Sync Controls */}
-      <div className="glass-panel" style={{ padding: '1.25rem' }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '1rem', marginBottom: '1rem' }}>
-          <div>
-            <h3 style={{ fontSize: '1.05rem', fontWeight: 700, color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-              <span>XEM TRƯỚC DANH SÁCH DỮ LIỆU CHỜ UPLOAD</span>
-              <span className="badge badge-blue">{parsedRows.length} dòng</span>
-            </h3>
-            <p style={{ fontSize: '0.775rem', color: 'var(--text-secondary)', marginTop: '0.2rem' }}>
-              Tổng tiền thanh toán đợt này: <strong style={{ color: '#34d399' }}>{formatMoney(totalPaymentSum)}</strong>
-            </p>
+      {/* SUB-TABS NAVIGATION BAR FOR THE 3 SUMMARY TABLES */}
+      <div className="glass-panel" style={{ padding: '0.6rem', display: 'flex', alignItems: 'center', gap: '0.6rem', overflowX: 'auto', flexWrap: 'wrap' }}>
+        
+        {/* Sub-Tab 1: Pending Upload Data */}
+        <button
+          onClick={() => setActiveSubView('pending')}
+          style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: '0.5rem',
+            padding: '0.65rem 1.1rem',
+            borderRadius: 'var(--radius-md)',
+            border: activeSubView === 'pending' ? '1px solid #06b6d4' : '1px solid transparent',
+            background: activeSubView === 'pending' ? 'rgba(6, 182, 212, 0.2)' : 'transparent',
+            color: activeSubView === 'pending' ? '#22d3ee' : 'var(--text-secondary)',
+            fontWeight: activeSubView === 'pending' ? 700 : 500,
+            fontSize: '0.875rem',
+            cursor: 'pointer',
+            transition: 'all 0.2s ease'
+          }}
+        >
+          <UploadCloud size={16} />
+          <span>⏳ Dữ Liệu Đang Chờ Upload ({parsedRows.length})</span>
+        </button>
+
+        {/* Sub-Tab 2: Last Uploaded Batch */}
+        <button
+          onClick={() => setActiveSubView('last_batch')}
+          style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: '0.5rem',
+            padding: '0.65rem 1.1rem',
+            borderRadius: 'var(--radius-md)',
+            border: activeSubView === 'last_batch' ? '1px solid #10b981' : '1px solid transparent',
+            background: activeSubView === 'last_batch' ? 'rgba(16, 185, 129, 0.2)' : 'transparent',
+            color: activeSubView === 'last_batch' ? '#34d399' : 'var(--text-secondary)',
+            fontWeight: activeSubView === 'last_batch' ? 700 : 500,
+            fontSize: '0.875rem',
+            cursor: 'pointer',
+            transition: 'all 0.2s ease'
+          }}
+        >
+          <CheckCircle2 size={16} />
+          <span>✨ Biểu 1: Dữ Liệu Vừa Upload ({lastUploadedBatch.length})</span>
+        </button>
+
+        {/* Sub-Tab 3: All Sheet 'up' Records */}
+        <button
+          onClick={() => setActiveSubView('all_sheet_up')}
+          style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: '0.5rem',
+            padding: '0.65rem 1.1rem',
+            borderRadius: 'var(--radius-md)',
+            border: activeSubView === 'all_sheet_up' ? '1px solid #a855f7' : '1px solid transparent',
+            background: activeSubView === 'all_sheet_up' ? 'rgba(168, 85, 247, 0.2)' : 'transparent',
+            color: activeSubView === 'all_sheet_up' ? '#c084fc' : 'var(--text-secondary)',
+            fontWeight: activeSubView === 'all_sheet_up' ? 700 : 500,
+            fontSize: '0.875rem',
+            cursor: 'pointer',
+            transition: 'all 0.2s ease'
+          }}
+        >
+          <History size={16} />
+          <span>📋 Biểu 2: Toàn Bộ Sheet 'up' ({allUpSheetRecords.length})</span>
+        </button>
+      </div>
+
+      {/* TABLE VIEW 1: PENDING UPLOAD DATA */}
+      {activeSubView === 'pending' && (
+        <div className="glass-panel" style={{ padding: '1.25rem' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '1rem', marginBottom: '1rem' }}>
+            <div>
+              <h3 style={{ fontSize: '1.05rem', fontWeight: 700, color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <span>XEM TRƯỚC DANH SÁCH CHỜ UPLOAD</span>
+                <span className="badge badge-blue">{parsedRows.length} dòng</span>
+              </h3>
+              <p style={{ fontSize: '0.775rem', color: 'var(--text-secondary)', marginTop: '0.2rem' }}>
+                Tổng tiền thanh toán đợt này: <strong style={{ color: '#34d399' }}>{formatMoney(pendingSum)}</strong>
+              </p>
+            </div>
+
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+              {parsedRows.length > 0 && (
+                <button
+                  className="btn btn-secondary"
+                  onClick={() => setParsedRows([])}
+                  style={{ color: '#f87171', borderColor: 'rgba(239, 68, 68, 0.3)' }}
+                >
+                  <Trash2 size={16} />
+                  <span>Xóa Hết</span>
+                </button>
+              )}
+
+              <button
+                className="btn btn-primary"
+                onClick={handleSyncToGoogleSheets}
+                disabled={isUploading || parsedRows.length === 0}
+                style={{
+                  background: 'linear-gradient(135deg, #06b6d4, #2563eb)',
+                  opacity: (isUploading || parsedRows.length === 0) ? 0.6 : 1,
+                  padding: '0.75rem 1.5rem',
+                  fontSize: '0.95rem',
+                  fontWeight: 700
+                }}
+              >
+                {isUploading ? <RefreshCw size={18} className="animate-spin" /> : <UploadCloud size={18} />}
+                <span>{isUploading ? 'Đang Đẩy Lên Google Sheet...' : '🚀 ĐẨY DỮ LIỆU LÊN GOOGLE SHEET (SHEET "UP")'}</span>
+              </button>
+            </div>
           </div>
 
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-            {parsedRows.length > 0 && (
-              <button
-                className="btn btn-secondary"
-                onClick={() => setParsedRows([])}
-                style={{ color: '#f87171', borderColor: 'rgba(239, 68, 68, 0.3)' }}
-              >
-                <Trash2 size={16} />
-                <span>Xóa Hết</span>
-              </button>
-            )}
-
-            <button
-              className="btn btn-primary"
-              onClick={handleSyncToGoogleSheets}
-              disabled={isUploading || parsedRows.length === 0}
-              style={{
-                background: 'linear-gradient(135deg, #06b6d4, #2563eb)',
-                opacity: (isUploading || parsedRows.length === 0) ? 0.6 : 1,
-                padding: '0.75rem 1.5rem',
-                fontSize: '0.95rem',
-                fontWeight: 700
-              }}
-            >
-              {isUploading ? <RefreshCw size={18} className="animate-spin" /> : <UploadCloud size={18} />}
-              <span>{isUploading ? 'Đang Đẩy Lên Google Sheet...' : '🚀 ĐẨY DỮ LIỆU LÊN GOOGLE SHEET (SHEET "UP")'}</span>
-            </button>
+          <div className="table-container" style={{ maxHeight: '450px' }}>
+            <table className="custom-table">
+              <thead>
+                <tr>
+                  <th style={{ textAlign: 'center', width: '60px' }}>STT</th>
+                  <th>MÃ CSHT</th>
+                  <th style={{ textAlign: 'right' }}>SỐ TIỀN THANH TOÁN</th>
+                  <th>SỐ THÁNG THANH TOÁN</th>
+                  <th style={{ textAlign: 'center' }}>TÌNH TRẠNG</th>
+                  <th>GHI CHÚ</th>
+                  <th style={{ textAlign: 'center', width: '60px' }}>XÓA</th>
+                </tr>
+              </thead>
+              <tbody>
+                {parsedRows.length === 0 ? (
+                  <tr>
+                    <td colSpan={7} style={{ textAlign: 'center', padding: '2.5rem', color: 'var(--text-muted)' }}>
+                      Chưa có dữ liệu chờ upload. Vui lòng chọn file Excel hoặc dùng form "Nhập Nhanh 1 Trạm" ở trên.
+                    </td>
+                  </tr>
+                ) : (
+                  parsedRows.map((row, idx) => {
+                    const matchStation = stationsData ? stationsData.find(s => s.maCSHT?.toLowerCase() === row.maCSHT?.toLowerCase()) : null;
+                    return (
+                      <tr key={row.id || idx}>
+                        <td style={{ textAlign: 'center', fontWeight: 600, color: 'var(--text-muted)' }}>{idx + 1}</td>
+                        <td style={{ fontWeight: 700, color: matchStation ? '#38bdf8' : '#fbbf24' }}>
+                          {row.maCSHT}
+                          {matchStation ? (
+                            <span style={{ marginLeft: '0.4rem', fontSize: '0.65rem', background: 'rgba(16, 185, 129, 0.2)', color: '#34d399', padding: '0.1rem 0.4rem', borderRadius: '4px' }}>
+                              Khớp DB
+                            </span>
+                          ) : (
+                            <span style={{ marginLeft: '0.4rem', fontSize: '0.65rem', background: 'rgba(245, 158, 11, 0.2)', color: '#fbbf24', padding: '0.1rem 0.4rem', borderRadius: '4px' }}>
+                              Mới
+                            </span>
+                          )}
+                        </td>
+                        <td style={{ textAlign: 'right', fontWeight: 700, color: '#34d399' }}>
+                          {formatMoney(row.soTienThanhToan)}
+                        </td>
+                        <td style={{ color: 'var(--text-secondary)' }}>{row.soThangThanhToan || '---'}</td>
+                        <td style={{ textAlign: 'center' }}>
+                          <span className={`badge ${
+                            row.tinhTrang === 'đã thanh toán' ? 'badge-emerald' : 
+                            row.tinhTrang === 'đã chuyển lên VTT' ? 'badge-blue' : 'badge-amber'
+                          }`}>
+                            {row.tinhTrang}
+                          </span>
+                        </td>
+                        <td style={{ color: 'var(--text-muted)', fontSize: '0.8rem' }}>{row.ghiChu || '---'}</td>
+                        <td style={{ textAlign: 'center' }}>
+                          <button
+                            onClick={() => setParsedRows(prev => prev.filter(r => r.id !== row.id))}
+                            style={{ background: 'none', border: 'none', color: '#f87171', cursor: 'pointer', padding: '0.2rem' }}
+                            title="Xóa dòng này"
+                          >
+                            <Trash2 size={16} />
+                          </button>
+                        </td>
+                      </tr>
+                    );
+                  })
+                )}
+              </tbody>
+            </table>
           </div>
         </div>
+      )}
 
-        {/* Custom Table */}
-        <div className="table-container" style={{ maxHeight: '450px' }}>
-          <table className="custom-table">
-            <thead>
-              <tr>
-                <th style={{ textAlign: 'center', width: '60px' }}>STT</th>
-                <th>MÃ CSHT</th>
-                <th style={{ textAlign: 'right' }}>SỐ TIỀN THANH TOÁN</th>
-                <th>SỐ THÁNG THANH TOÁN</th>
-                <th style={{ textAlign: 'center' }}>TÌNH TRẠNG</th>
-                <th>GHI CHÚ</th>
-                <th style={{ textAlign: 'center', width: '60px' }}>XÓA</th>
-              </tr>
-            </thead>
-            <tbody>
-              {parsedRows.length === 0 ? (
+      {/* TABLE VIEW 2: BIỂU 1 - DỮ LIỆU VỪA UPLOAD (LẦN NÀY) */}
+      {activeSubView === 'last_batch' && (
+        <div className="glass-panel" style={{ padding: '1.25rem', borderTop: '3px solid #10b981' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '1rem', marginBottom: '1rem' }}>
+            <div>
+              <h3 style={{ fontSize: '1.05rem', fontWeight: 700, color: '#34d399', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <CheckCircle2 size={20} />
+                <span>BIỂU 1: DANH SÁCH CSHT VỪA UPLOAD THÀNH CÔNG ({lastUploadedBatch.length} trạm)</span>
+              </h3>
+              <p style={{ fontSize: '0.775rem', color: 'var(--text-secondary)', marginTop: '0.2rem' }}>
+                Thời gian thực hiện: <strong>{lastUploadTime || 'Vừa xong'}</strong> • Tổng tiền upload đợt này: <strong style={{ color: '#34d399' }}>{formatMoney(lastBatchSum)}</strong>
+              </p>
+            </div>
+
+            <button
+              className="btn btn-emerald"
+              onClick={() => exportBatchToExcel(lastUploadedBatch, 'Dot_Vua_Upload', 'Bao_Cao_Thanh_Toan_Dot_Vua_Up')}
+              disabled={lastUploadedBatch.length === 0}
+              style={{ fontWeight: 700 }}
+            >
+              <Download size={16} />
+              <span>📥 Xuất Excel Đợt Này</span>
+            </button>
+          </div>
+
+          <div className="table-container" style={{ maxHeight: '450px' }}>
+            <table className="custom-table">
+              <thead>
                 <tr>
-                  <td colSpan={7} style={{ textAlign: 'center', padding: '2.5rem', color: 'var(--text-muted)' }}>
-                    Chưa có dữ liệu. Vui lòng chọn file Excel hoặc dùng form "Nhập Nhanh 1 Trạm" ở trên.
-                  </td>
+                  <th style={{ textAlign: 'center', width: '60px' }}>STT</th>
+                  <th>MÃ CSHT</th>
+                  <th style={{ textAlign: 'right' }}>SỐ TIỀN THANH TOÁN</th>
+                  <th>SỐ THÁNG THANH TOÁN</th>
+                  <th style={{ textAlign: 'center' }}>TÌNH TRẠNG</th>
+                  <th>GHI CHÚ</th>
                 </tr>
-              ) : (
-                parsedRows.map((row, idx) => {
-                  const matchStation = stationsData ? stationsData.find(s => s.maCSHT?.toLowerCase() === row.maCSHT?.toLowerCase()) : null;
-                  return (
+              </thead>
+              <tbody>
+                {lastUploadedBatch.length === 0 ? (
+                  <tr>
+                    <td colSpan={6} style={{ textAlign: 'center', padding: '2.5rem', color: 'var(--text-muted)' }}>
+                      Chưa có dữ liệu vừa upload trong phiên này. Hãy chọn file Excel và bấm nút "🚀 Đẩy Dữ Liệu Lên Google Sheet".
+                    </td>
+                  </tr>
+                ) : (
+                  lastUploadedBatch.map((row, idx) => (
                     <tr key={row.id || idx}>
                       <td style={{ textAlign: 'center', fontWeight: 600, color: 'var(--text-muted)' }}>{idx + 1}</td>
-                      <td style={{ fontWeight: 700, color: matchStation ? '#38bdf8' : '#fbbf24' }}>
-                        {row.maCSHT}
-                        {matchStation ? (
-                          <span style={{ marginLeft: '0.4rem', fontSize: '0.65rem', background: 'rgba(16, 185, 129, 0.2)', color: '#34d399', padding: '0.1rem 0.4rem', borderRadius: '4px' }}>
-                            Khớp DB
-                          </span>
-                        ) : (
-                          <span style={{ marginLeft: '0.4rem', fontSize: '0.65rem', background: 'rgba(245, 158, 11, 0.2)', color: '#fbbf24', padding: '0.1rem 0.4rem', borderRadius: '4px' }}>
-                            Mới
-                          </span>
-                        )}
+                      <td style={{ fontWeight: 700, color: '#38bdf8' }}>{row.maCSHT}</td>
+                      <td style={{ textAlign: 'right', fontWeight: 700, color: '#34d399' }}>
+                        {formatMoney(row.soTienThanhToan)}
                       </td>
+                      <td style={{ color: 'var(--text-secondary)' }}>{row.soThangThanhToan || '---'}</td>
+                      <td style={{ textAlign: 'center' }}>
+                        <span className="badge badge-emerald">
+                          {row.tinhTrang || 'đã thanh toán'}
+                        </span>
+                      </td>
+                      <td style={{ color: 'var(--text-muted)', fontSize: '0.8rem' }}>{row.ghiChu || '---'}</td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {/* TABLE VIEW 3: BIỂU 2 - TOÀN BỘ SHEET 'UP' */}
+      {activeSubView === 'all_sheet_up' && (
+        <div className="glass-panel" style={{ padding: '1.25rem', borderTop: '3px solid #a855f7' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '1rem', marginBottom: '1rem' }}>
+            <div>
+              <h3 style={{ fontSize: '1.05rem', fontWeight: 700, color: '#c084fc', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <History size={20} />
+                <span>BIỂU 2: BẢNG TỔNG HỢP TOÀN BỘ CSHT ĐÃ UPLOAD (SHEET "UP") ({filteredAllUpRecords.length} trạm)</span>
+              </h3>
+              <p style={{ fontSize: '0.775rem', color: 'var(--text-secondary)', marginTop: '0.2rem' }}>
+                Dữ liệu được tải trực tiếp từ tab <strong>sheet 'up'</strong> trên Google Sheets • Tổng tiền lũy kế đã up: <strong style={{ color: '#34d399' }}>{formatMoney(allUpSum)}</strong>
+              </p>
+            </div>
+
+            <button
+              className="btn btn-secondary"
+              onClick={() => exportBatchToExcel(filteredAllUpRecords, 'Toan_Bo_Sheet_Up', 'Tong_Hop_Toan_Bo_Sheet_Up')}
+              disabled={filteredAllUpRecords.length === 0}
+              style={{ fontWeight: 700, borderColor: '#a855f7', color: '#c084fc' }}
+            >
+              <Download size={16} />
+              <span>📥 Xuất Excel Toàn Bộ Sheet 'up'</span>
+            </button>
+          </div>
+
+          {/* Search & Status Filters */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1rem', flexWrap: 'wrap' }}>
+            <div style={{ position: 'relative', flex: 1, minWidth: '220px' }}>
+              <input
+                type="text"
+                className="input-field"
+                placeholder="Lọc toàn bộ dữ liệu Sheet 'up' theo mã CSHT, ghi chú..."
+                value={historySearch}
+                onChange={(e) => setHistorySearch(e.target.value)}
+                style={{ paddingLeft: '2.2rem' }}
+              />
+              <Search size={16} style={{ position: 'absolute', left: '0.75rem', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
+            </div>
+
+            <select
+              className="input-field"
+              style={{ width: 'auto' }}
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value)}
+            >
+              <option value="all">Tất cả tình trạng</option>
+              <option value="đã thanh toán">đã thanh toán</option>
+              <option value="đã chuyển lên VTT">đã chuyển lên VTT</option>
+              <option value="đã xong hồ sơ">đã xong hồ sơ</option>
+            </select>
+          </div>
+
+          <div className="table-container" style={{ maxHeight: '500px' }}>
+            <table className="custom-table">
+              <thead>
+                <tr>
+                  <th style={{ textAlign: 'center', width: '60px' }}>STT</th>
+                  <th>MÃ CSHT</th>
+                  <th style={{ textAlign: 'right' }}>SỐ TIỀN THANH TOÁN</th>
+                  <th>SỐ THÁNG THANH TOÁN</th>
+                  <th style={{ textAlign: 'center' }}>TÌNH TRẠNG</th>
+                  <th>GHI CHÚ</th>
+                </tr>
+              </thead>
+              <tbody>
+                {isLoadingHistory ? (
+                  <tr>
+                    <td colSpan={6} style={{ textAlign: 'center', padding: '2.5rem', color: 'var(--text-muted)' }}>
+                      <RefreshCw size={24} className="animate-spin" style={{ margin: '0 auto 0.5rem auto', color: '#a855f7' }} />
+                      Đang tải toàn bộ dữ liệu từ Sheet 'up'...
+                    </td>
+                  </tr>
+                ) : filteredAllUpRecords.length === 0 ? (
+                  <tr>
+                    <td colSpan={6} style={{ textAlign: 'center', padding: '2.5rem', color: 'var(--text-muted)' }}>
+                      Chưa có dữ liệu nào trong Sheet 'up' phù hợp bộ lọc.
+                    </td>
+                  </tr>
+                ) : (
+                  filteredAllUpRecords.map((row, idx) => (
+                    <tr key={idx}>
+                      <td style={{ textAlign: 'center', fontWeight: 600, color: 'var(--text-muted)' }}>{idx + 1}</td>
+                      <td style={{ fontWeight: 700, color: '#60a5fa' }}>{row.maCSHT}</td>
                       <td style={{ textAlign: 'right', fontWeight: 700, color: '#34d399' }}>
                         {formatMoney(row.soTienThanhToan)}
                       </td>
                       <td style={{ color: 'var(--text-secondary)' }}>{row.soThangThanhToan || '---'}</td>
                       <td style={{ textAlign: 'center' }}>
                         <span className={`badge ${
-                          row.tinhTrang === 'đã thanh toán' ? 'badge-emerald' : 
-                          row.tinhTrang === 'đã chuyển lên VTT' ? 'badge-blue' : 'badge-amber'
+                          String(row.tinhTrang).toLowerCase().includes('đã thanh toán') ? 'badge-emerald' : 
+                          String(row.tinhTrang).toLowerCase().includes('vtt') ? 'badge-blue' : 'badge-amber'
                         }`}>
-                          {row.tinhTrang}
+                          {row.tinhTrang || 'đã thanh toán'}
                         </span>
                       </td>
                       <td style={{ color: 'var(--text-muted)', fontSize: '0.8rem' }}>{row.ghiChu || '---'}</td>
-                      <td style={{ textAlign: 'center' }}>
-                        <button
-                          onClick={() => handleRemoveRow(row.id)}
-                          style={{ background: 'none', border: 'none', color: '#f87171', cursor: 'pointer', padding: '0.2rem' }}
-                          title="Xóa dòng này"
-                        >
-                          <Trash2 size={16} />
-                        </button>
-                      </td>
                     </tr>
-                  );
-                })
-              )}
-            </tbody>
-          </table>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
         </div>
-      </div>
+      )}
 
     </div>
   );
