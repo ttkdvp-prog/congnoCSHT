@@ -8,6 +8,7 @@ import TabBar from './components/TabBar';
 import KpiCards from './components/KpiCards';
 import FilterBar from './components/FilterBar';
 import PriceIncreasePanel from './components/PriceIncreasePanel';
+import AddPriceIncreaseTab from './components/AddPriceIncreaseTab';
 import AnalyticsSection from './components/AnalyticsSection';
 import DataTable from './components/DataTable';
 import EditPriceModal from './components/EditPriceModal';
@@ -501,235 +502,254 @@ export default function App() {
         onChangeSyncInterval={(val) => setSyncInterval(val)}
       />
 
-      {/* Main Navigation Tabs */}
-      <TabBar
-        activeTab={mainTab}
-        onTabChange={handleTabChange}
-        counts={tabCounts}
-      />
-
-      {/* Offline Alert Banner */}
-      {!isLive && (
-        <div style={{
-          background: 'rgba(245, 158, 11, 0.15)',
-          border: '1px solid #f59e0b',
-          borderRadius: 'var(--radius-md)',
-          padding: '0.875rem 1.25rem',
-          marginBottom: '1.5rem',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          flexWrap: 'wrap',
-          gap: '0.75rem',
-          color: '#fbbf24',
-          fontSize: '0.85rem'
-        }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-            <AlertTriangle size={20} style={{ flexShrink: 0 }} />
-            <div>
-              <strong>⚠️ Chế độ Offline Data:</strong> Bạn chưa kết nối Google Apps Script API nên dữ liệu khi sửa chỉ lưu tạm trên trình duyệt và <u>chưa sửa trực tiếp trên Google Sheet</u>.
-            </div>
-          </div>
-          <button className="btn btn-amber" onClick={() => setIsConfigOpen(true)} style={{ padding: '0.4rem 0.85rem', fontSize: '0.8rem' }}>
-            <Settings size={14} />
-            <span>Kết nối Google Sheet ngay</span>
-          </button>
+      {/* Main 2-Column Dashboard Layout */}
+      <div className="dashboard-container">
+        
+        {/* Left Sidebar Navigation */}
+        <div className="sidebar-wrapper">
+          <TabBar
+            activeTab={mainTab}
+            onTabChange={handleTabChange}
+            counts={tabCounts}
+          />
         </div>
-      )}
 
-      {/* Toast Notification Banner */}
-      {toastMessage && (
-        <div style={{
-          position: 'fixed',
-          bottom: '24px',
-          right: '24px',
-          zIndex: 9999,
-          background: toastMessage.type === 'success' ? '#065f46' : toastMessage.type === 'warning' ? '#78350f' : '#881337',
-          border: '1px solid rgba(255,255,255,0.2)',
-          color: '#fff',
-          padding: '1rem 1.25rem',
-          borderRadius: 'var(--radius-md)',
-          boxShadow: '0 20px 25px -5px rgba(0,0,0,0.5)',
-          maxWidth: '450px',
-          fontSize: '0.85rem',
-          lineHeight: 1.5,
-          animation: 'modalFadeIn 0.3s ease'
-        }}>
-          {toastMessage.text}
+        {/* Right Main Content Area */}
+        <div className="main-content-wrapper">
+
+          {/* Offline Alert Banner */}
+          {!isLive && (
+            <div style={{
+              background: 'rgba(245, 158, 11, 0.15)',
+              border: '1px solid #f59e0b',
+              borderRadius: 'var(--radius-md)',
+              padding: '0.875rem 1.25rem',
+              marginBottom: '1.5rem',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              flexWrap: 'wrap',
+              gap: '0.75rem',
+              color: '#fbbf24',
+              fontSize: '0.85rem'
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                <AlertTriangle size={20} style={{ flexShrink: 0 }} />
+                <div>
+                  <strong>⚠️ Chế độ Offline Data:</strong> Bạn chưa kết nối Google Apps Script API nên dữ liệu khi sửa chỉ lưu tạm trên trình duyệt và <u>chưa sửa trực tiếp trên Google Sheet</u>.
+                </div>
+              </div>
+              <button className="btn btn-amber" onClick={() => setIsConfigOpen(true)} style={{ padding: '0.4rem 0.85rem', fontSize: '0.8rem' }}>
+                <Settings size={14} />
+                <span>Kết nối Google Sheet ngay</span>
+              </button>
+            </div>
+          )}
+
+          {/* Toast Notification Banner */}
+          {toastMessage && (
+            <div style={{
+              position: 'fixed',
+              bottom: '24px',
+              right: '24px',
+              zIndex: 9999,
+              background: toastMessage.type === 'success' ? '#065f46' : toastMessage.type === 'warning' ? '#78350f' : '#881337',
+              border: '1px solid rgba(255,255,255,0.2)',
+              color: '#fff',
+              padding: '1rem 1.25rem',
+              borderRadius: 'var(--radius-md)',
+              boxShadow: '0 20px 25px -5px rgba(0,0,0,0.5)',
+              maxWidth: '450px',
+              fontSize: '0.85rem',
+              lineHeight: 1.5,
+              animation: 'modalFadeIn 0.3s ease'
+            }}>
+              {toastMessage.text}
+            </div>
+          )}
+
+          {/* TAB 1: OVERVIEW & ANALYTICS */}
+          {mainTab === 'overview' && (
+            <>
+              <KpiCards
+                stats={stats}
+                activeFilter={activeFilterName}
+                onSelectPriceIncreaseOnly={() => handleTabChange('priceIncrease')}
+                onSelectPaidOnly={() => handleTabChange('paid2026')}
+                onSelectDebtOnly={() => handleTabChange('debt2025')}
+              />
+              <AnalyticsSection data={data} />
+              <PriceIncreasePanel
+                data={data}
+                onEditStation={(station) => setEditingPriceStation(station)}
+                onExportPriceIncreaseExcel={handleExportPriceIncreaseExcel}
+              />
+            </>
+          )}
+
+          {/* TAB 2: ADD & UPDATE PRICE INCREASE STATIONS */}
+          {mainTab === 'addPriceIncrease' && (
+            <AddPriceIncreaseTab
+              data={data}
+              onSaveStation={handleSaveStation}
+              isSaving={isSaving}
+            />
+          )}
+
+          {/* TAB 3: PRICE INCREASE STATIONS */}
+          {mainTab === 'priceIncrease' && (
+            <>
+              <PriceIncreasePanel
+                data={data}
+                onEditStation={(station) => setEditingPriceStation(station)}
+                onExportPriceIncreaseExcel={handleExportPriceIncreaseExcel}
+              />
+              <FilterBar
+                filters={filters}
+                onChange={handleFilterChange}
+                onReset={handleResetFilters}
+                toHaTangOptions={toHaTangOptions}
+                siteOptions={siteOptions}
+                phapLyOptions={phapLyOptions}
+                thoiDiemOptions={thoiDiemOptions}
+                totalFiltered={filteredData.length}
+                totalAll={data.length}
+              />
+              <DataTable
+                data={filteredData}
+                onViewDetail={(station) => setViewingStation(station)}
+                onEditPrice={(station) => setEditingStation(station)}
+              />
+            </>
+          )}
+
+          {/* TAB 4: DEBT 2025 STATIONS */}
+          {mainTab === 'debt2025' && (
+            <>
+              <div style={{ background: 'rgba(239, 68, 68, 0.1)', border: '1px solid rgba(239, 68, 68, 0.3)', padding: '1rem 1.25rem', borderRadius: 'var(--radius-md)', marginBottom: '1.25rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.75rem' }}>
+                <div style={{ color: '#f87171', fontSize: '0.95rem', fontWeight: 600 }}>
+                  ⚠️ Danh sách <strong>{filteredData.length} trạm</strong> còn nợ tồn năm 2025. Tổng tiền nợ tồn 2025: <strong>{(stats?.totalNo2025Ton || 0).toLocaleString('vi-VN')} ₫</strong>.
+                </div>
+                <button 
+                  className="btn btn-rose" 
+                  onClick={() => handleExportExcel(filteredData, 'Tram_No_Ton_2025')}
+                  style={{ padding: '0.45rem 1rem', fontSize: '0.85rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '0.5rem' }}
+                  title="Xuất danh sách trạm nợ tồn 2025 ra Excel"
+                >
+                  <Download size={16} />
+                  <span>Xuất Excel Nợ Tồn 2025 ({filteredData.length} Trạm)</span>
+                </button>
+              </div>
+              <FilterBar
+                filters={filters}
+                onChange={handleFilterChange}
+                onReset={handleResetFilters}
+                toHaTangOptions={toHaTangOptions}
+                siteOptions={siteOptions}
+                phapLyOptions={phapLyOptions}
+                thoiDiemOptions={thoiDiemOptions}
+                totalFiltered={filteredData.length}
+                totalAll={data.length}
+              />
+              <DataTable
+                data={filteredData}
+                onViewDetail={(station) => setViewingStation(station)}
+                onEditPrice={(station) => setEditingStation(station)}
+              />
+            </>
+          )}
+
+          {/* TAB 5: UNPAID 2026 STATIONS & MONTHS OWED */}
+          {mainTab === 'unpaid2026' && (
+            <>
+              <div style={{ background: 'rgba(249, 115, 22, 0.1)', border: '1px solid rgba(249, 115, 22, 0.3)', padding: '1rem 1.25rem', borderRadius: 'var(--radius-md)', marginBottom: '1.25rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.75rem' }}>
+                <div style={{ color: '#fb923c', fontSize: '0.95rem', fontWeight: 600 }}>
+                  🔴 Danh sách <strong>{filteredData.length} trạm</strong> chưa thanh toán đủ tiền năm 2026. Tổng tiền còn nợ 2026: <strong>{filteredData.reduce((s, i) => s + (i.no2026Ton || 0), 0).toLocaleString('vi-VN')} ₫</strong>.
+                </div>
+                <button 
+                  className="btn btn-amber" 
+                  onClick={() => handleExportExcel(filteredData, 'Tram_No_Tien_2026')}
+                  style={{ padding: '0.45rem 1rem', fontSize: '0.85rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '0.5rem' }}
+                  title="Xuất danh sách trạm nợ tiền 2026 ra Excel"
+                >
+                  <Download size={16} />
+                  <span>Xuất Excel Nợ Tiền 2026 ({filteredData.length} Trạm)</span>
+                </button>
+              </div>
+              <FilterBar
+                filters={filters}
+                onChange={handleFilterChange}
+                onReset={handleResetFilters}
+                toHaTangOptions={toHaTangOptions}
+                siteOptions={siteOptions}
+                phapLyOptions={phapLyOptions}
+                thoiDiemOptions={thoiDiemOptions}
+                totalFiltered={filteredData.length}
+                totalAll={data.length}
+              />
+              <DataTable
+                data={filteredData}
+                onViewDetail={(station) => setViewingStation(station)}
+                onEditPrice={(station) => setEditingStation(station)}
+              />
+            </>
+          )}
+
+          {/* TAB 6: PAID 2026 STATIONS */}
+          {mainTab === 'paid2026' && (
+            <>
+              <div style={{ background: 'rgba(16, 185, 129, 0.1)', border: '1px solid rgba(16, 185, 129, 0.3)', padding: '1rem 1.25rem', borderRadius: 'var(--radius-md)', marginBottom: '1.25rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.75rem' }}>
+                <div style={{ color: '#34d399', fontSize: '0.95rem', fontWeight: 600 }}>
+                  ✅ Danh sách <strong>{filteredData.length} trạm</strong> đã thanh toán hoàn tất tiền năm 2026.
+                </div>
+              </div>
+              <FilterBar
+                filters={filters}
+                onChange={handleFilterChange}
+                onReset={handleResetFilters}
+                toHaTangOptions={toHaTangOptions}
+                siteOptions={siteOptions}
+                phapLyOptions={phapLyOptions}
+                thoiDiemOptions={thoiDiemOptions}
+                totalFiltered={filteredData.length}
+                totalAll={data.length}
+              />
+              <DataTable
+                data={filteredData}
+                onViewDetail={(station) => setViewingStation(station)}
+                onEditPrice={(station) => setEditingStation(station)}
+              />
+            </>
+          )}
+
+          {/* TAB 7: ALL STATIONS MASTER TABLE */}
+          {mainTab === 'allStations' && (
+            <>
+              <FilterBar
+                filters={filters}
+                onChange={handleFilterChange}
+                onReset={handleResetFilters}
+                toHaTangOptions={toHaTangOptions}
+                siteOptions={siteOptions}
+                phapLyOptions={phapLyOptions}
+                thoiDiemOptions={thoiDiemOptions}
+                totalFiltered={filteredData.length}
+                totalAll={data.length}
+              />
+              <DataTable
+                data={filteredData}
+                onViewDetail={(station) => setViewingStation(station)}
+                onEditPrice={(station) => setEditingStation(station)}
+              />
+            </>
+          )}
+
+          {/* Footer */}
+          <footer style={{ textAlign: 'center', marginTop: '2.5rem', color: 'var(--text-muted)', fontSize: '0.8rem' }}>
+            Quản Lý Công Nợ & Trạm Tăng Giá CSHT
+          </footer>
         </div>
-      )}
-
-      {/* TAB 1: OVERVIEW & ANALYTICS */}
-      {mainTab === 'overview' && (
-        <>
-          <KpiCards
-            stats={stats}
-            activeFilter={activeFilterName}
-            onSelectPriceIncreaseOnly={() => handleTabChange('priceIncrease')}
-            onSelectPaidOnly={() => handleTabChange('paid2026')}
-            onSelectDebtOnly={() => handleTabChange('debt2025')}
-          />
-          <AnalyticsSection data={data} />
-          <PriceIncreasePanel
-            data={data}
-            onEditStation={(station) => setEditingPriceStation(station)}
-            onExportPriceIncreaseExcel={handleExportPriceIncreaseExcel}
-          />
-        </>
-      )}
-
-      {/* TAB 2: PRICE INCREASE STATIONS */}
-      {mainTab === 'priceIncrease' && (
-        <>
-          <PriceIncreasePanel
-            data={data}
-            onEditStation={(station) => setEditingPriceStation(station)}
-            onExportPriceIncreaseExcel={handleExportPriceIncreaseExcel}
-          />
-          <FilterBar
-            filters={filters}
-            onChange={handleFilterChange}
-            onReset={handleResetFilters}
-            toHaTangOptions={toHaTangOptions}
-            siteOptions={siteOptions}
-            phapLyOptions={phapLyOptions}
-            thoiDiemOptions={thoiDiemOptions}
-            totalFiltered={filteredData.length}
-            totalAll={data.length}
-          />
-          <DataTable
-            data={filteredData}
-            onViewDetail={(station) => setViewingStation(station)}
-            onEditPrice={(station) => setEditingStation(station)}
-          />
-        </>
-      )}
-
-      {/* TAB 3: DEBT 2025 STATIONS */}
-      {mainTab === 'debt2025' && (
-        <>
-          <div style={{ background: 'rgba(239, 68, 68, 0.1)', border: '1px solid rgba(239, 68, 68, 0.3)', padding: '1rem 1.25rem', borderRadius: 'var(--radius-md)', marginBottom: '1.25rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.75rem' }}>
-            <div style={{ color: '#f87171', fontSize: '0.95rem', fontWeight: 600 }}>
-              ⚠️ Danh sách <strong>{filteredData.length} trạm</strong> còn nợ tồn năm 2025. Tổng tiền nợ tồn 2025: <strong>{(stats?.totalNo2025Ton || 0).toLocaleString('vi-VN')} ₫</strong>.
-            </div>
-            <button 
-              className="btn btn-rose" 
-              onClick={() => handleExportExcel(filteredData, 'Tram_No_Ton_2025')}
-              style={{ padding: '0.45rem 1rem', fontSize: '0.85rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '0.5rem' }}
-              title="Xuất danh sách trạm nợ tồn 2025 ra Excel"
-            >
-              <Download size={16} />
-              <span>Xuất Excel Nợ Tồn 2025 ({filteredData.length} Trạm)</span>
-            </button>
-          </div>
-          <FilterBar
-            filters={filters}
-            onChange={handleFilterChange}
-            onReset={handleResetFilters}
-            toHaTangOptions={toHaTangOptions}
-            siteOptions={siteOptions}
-            phapLyOptions={phapLyOptions}
-            thoiDiemOptions={thoiDiemOptions}
-            totalFiltered={filteredData.length}
-            totalAll={data.length}
-          />
-          <DataTable
-            data={filteredData}
-            onViewDetail={(station) => setViewingStation(station)}
-            onEditPrice={(station) => setEditingStation(station)}
-          />
-        </>
-      )}
-
-      {/* TAB 4: UNPAID 2026 STATIONS & MONTHS OWED */}
-      {mainTab === 'unpaid2026' && (
-        <>
-          <div style={{ background: 'rgba(249, 115, 22, 0.1)', border: '1px solid rgba(249, 115, 22, 0.3)', padding: '1rem 1.25rem', borderRadius: 'var(--radius-md)', marginBottom: '1.25rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.75rem' }}>
-            <div style={{ color: '#fb923c', fontSize: '0.95rem', fontWeight: 600 }}>
-              🔴 Danh sách <strong>{filteredData.length} trạm</strong> chưa thanh toán đủ tiền năm 2026. Tổng tiền còn nợ 2026: <strong>{filteredData.reduce((s, i) => s + (i.no2026Ton || 0), 0).toLocaleString('vi-VN')} ₫</strong>.
-            </div>
-            <button 
-              className="btn btn-amber" 
-              onClick={() => handleExportExcel(filteredData, 'Tram_No_Tien_2026')}
-              style={{ padding: '0.45rem 1rem', fontSize: '0.85rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '0.5rem' }}
-              title="Xuất danh sách trạm nợ tiền 2026 ra Excel"
-            >
-              <Download size={16} />
-              <span>Xuất Excel Nợ Tiền 2026 ({filteredData.length} Trạm)</span>
-            </button>
-          </div>
-          <FilterBar
-            filters={filters}
-            onChange={handleFilterChange}
-            onReset={handleResetFilters}
-            toHaTangOptions={toHaTangOptions}
-            siteOptions={siteOptions}
-            phapLyOptions={phapLyOptions}
-            thoiDiemOptions={thoiDiemOptions}
-            totalFiltered={filteredData.length}
-            totalAll={data.length}
-          />
-          <DataTable
-            data={filteredData}
-            onViewDetail={(station) => setViewingStation(station)}
-            onEditPrice={(station) => setEditingStation(station)}
-          />
-        </>
-      )}
-
-      {/* TAB 5: PAID 2026 STATIONS */}
-      {mainTab === 'paid2026' && (
-        <>
-          <div style={{ background: 'rgba(16, 185, 129, 0.1)', border: '1px solid rgba(16, 185, 129, 0.3)', padding: '1rem 1.25rem', borderRadius: 'var(--radius-md)', marginBottom: '1.25rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.75rem' }}>
-            <div style={{ color: '#34d399', fontSize: '0.95rem', fontWeight: 600 }}>
-              ✅ Danh sách <strong>{filteredData.length} trạm</strong> đã thanh toán hoàn tất tiền năm 2026.
-            </div>
-          </div>
-          <FilterBar
-            filters={filters}
-            onChange={handleFilterChange}
-            onReset={handleResetFilters}
-            toHaTangOptions={toHaTangOptions}
-            siteOptions={siteOptions}
-            phapLyOptions={phapLyOptions}
-            thoiDiemOptions={thoiDiemOptions}
-            totalFiltered={filteredData.length}
-            totalAll={data.length}
-          />
-          <DataTable
-            data={filteredData}
-            onViewDetail={(station) => setViewingStation(station)}
-            onEditPrice={(station) => setEditingStation(station)}
-          />
-        </>
-      )}
-
-      {/* TAB 6: ALL STATIONS MASTER TABLE */}
-      {mainTab === 'allStations' && (
-        <>
-          <FilterBar
-            filters={filters}
-            onChange={handleFilterChange}
-            onReset={handleResetFilters}
-            toHaTangOptions={toHaTangOptions}
-            siteOptions={siteOptions}
-            phapLyOptions={phapLyOptions}
-            thoiDiemOptions={thoiDiemOptions}
-            totalFiltered={filteredData.length}
-            totalAll={data.length}
-          />
-          <DataTable
-            data={filteredData}
-            onViewDetail={(station) => setViewingStation(station)}
-            onEditPrice={(station) => setEditingStation(station)}
-          />
-        </>
-      )}
-
-      {/* Footer */}
-      <footer style={{ textAlign: 'center', marginTop: '2.5rem', color: 'var(--text-muted)', fontSize: '0.8rem' }}>
-        Quản Lý Công Nợ & Trạm Tăng Giá CSHT
-      </footer>
+      </div>
 
       {/* Full Station & Payment Edit Modal */}
       <EditStationModal

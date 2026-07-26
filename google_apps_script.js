@@ -310,29 +310,33 @@ function doPost(e) {
       return jsonResponse({ status: 'error', message: 'Trạm không tồn tại: ' + maCSHT });
     }
 
-    var updateFieldByPattern = function(pattern, value) {
+    var updateFieldByPattern = function(patterns, value) {
       if (value !== undefined) {
-        var idx = findColIdx(pattern);
-        if (idx !== -1) {
-          sheet.getRange(targetRow, idx + 1).setValue(value);
+        var patternList = Array.isArray(patterns) ? patterns : [patterns];
+        for (var p = 0; p < patternList.length; p++) {
+          var idx = findColIdx(patternList[p]);
+          if (idx !== -1) {
+            sheet.getRange(targetRow, idx + 1).setValue(value);
+            return;
+          }
         }
       }
     };
 
-    updateFieldByPattern('site', contents.site);
-    updateFieldByPattern('tổ hạ tầng', contents.toHaTang);
-    updateFieldByPattern('tên csht', contents.tenCSHT);
-    updateFieldByPattern('chủ hợp đồng', contents.chuHopDong);
-    updateFieldByPattern('số hợp đồng', contents.soHopDong);
-    updateFieldByPattern('tình trạng pháp lý', contents.tinhTrangPhapLy);
+    updateFieldByPattern(['site'], contents.site);
+    updateFieldByPattern(['tổ hạ tầng'], contents.toHaTang);
+    updateFieldByPattern(['tên csht'], contents.tenCSHT);
+    updateFieldByPattern(['chủ hợp đồng'], contents.chuHopDong);
+    updateFieldByPattern(['số hợp đồng'], contents.soHopDong);
+    updateFieldByPattern(['tình trạng pháp lý'], contents.tinhTrangPhapLy);
 
-    updateFieldByPattern('đơn giá 2025', contents.donGia2025);
-    updateFieldByPattern('đơn giá mới 2026', contents.donGia2026);
-    updateFieldByPattern('chênh lệch', contents.chenhLechDonGia);
-    updateFieldByPattern('đề xuất tăng giá t5', contents.deXuatT5);
-    updateFieldByPattern('tháng 6', contents.deXuatT6);
-    updateFieldByPattern('tháng 7', contents.deXuatT7);
-    updateFieldByPattern('thời điểm', contents.thoiDiemTangGia);
+    updateFieldByPattern(['đơn giá 2025'], contents.donGia2025);
+    updateFieldByPattern(['đơn giá mới 2026'], contents.donGia2026);
+    updateFieldByPattern(['chênh lệch'], contents.chenhLechDonGia);
+    updateFieldByPattern(['đề xuất tăng giá t5', 'tháng 5'], contents.deXuatT5);
+    updateFieldByPattern(['tháng 6', 'đề xuất tăng giá t6'], contents.deXuatT6);
+    updateFieldByPattern(['đề xuất tăng giá tháng 7', 'tháng 7', 'đề xuất t7'], contents.deXuatT7);
+    updateFieldByPattern(['thời điểm tăng giá', 'thời điểm'], contents.thoiDiemTangGia);
 
     updateFieldByPattern('tổng 2025 đã trả', contents.tong2025DaTra);
     updateFieldByPattern('còn nợ cn 2025', contents.no2025Ton);

@@ -298,3 +298,43 @@ h1, h2, h3, h4, .brand-font {
 ::-webkit-scrollbar-thumb:hover {
   background: var(--text-muted);
 }
+
+/* Vertical Dashboard Layout */
+.dashboard-container {
+  display: flex;
+  gap: 1.5rem;
+  align-items: flex-start;
+}
+
+.sidebar-wrapper {
+  width: 270px;
+  flex-shrink: 0;
+  position: sticky;
+  top: 1.5rem;
+}
+
+.main-content-wrapper {
+  flex: 1;
+  min-width: 0;
+}
+
+@media (max-width: 900px) {
+  .dashboard-container {
+    flex-direction: column;
+  }
+  
+  .sidebar-wrapper {
+    width: 100%;
+    position: static;
+  }
+
+  .sidebar-nav {
+    flex-direction: row !important;
+    overflow-x: auto;
+    padding: 0.5rem !important;
+  }
+
+  .sidebar-nav button {
+    width: auto !important;
+  }
+}
