@@ -143,6 +143,26 @@ export default function AddPriceIncreaseTab({ data, onSaveStation, isSaving }) {
     alert(`Văn bản đính kèm trạm ${station?.maCSHT || ''}:\n"${url}"\n\n📌 Gợi ý: Hãy dán Link Google Drive/OneDrive vào ô đính kèm để xem 1-click từ mọi thiết bị!`);
   };
 
+  // Remove a file from recent shared suggestions list
+  const handleRemoveRecentFile = (index, e) => {
+    e.stopPropagation();
+    setRecentFiles(prev => {
+      const updated = prev.filter((_, i) => i !== index);
+      try {
+        localStorage.setItem('csht_recent_attached_files', JSON.stringify(updated));
+      } catch (err) {}
+      return updated;
+    });
+  };
+
+  // Clear all recent shared suggestion chips
+  const handleClearAllRecentFiles = () => {
+    setRecentFiles([]);
+    try {
+      localStorage.removeItem('csht_recent_attached_files');
+    } catch (err) {}
+  };
+
   // Helper functions for formatting numbers with dots (hàng nghìn)
   const formatNumberWithDots = (val) => {
     if (val === null || val === undefined || val === '') return '';
@@ -707,41 +727,80 @@ export default function AddPriceIncreaseTab({ data, onSaveStation, isSaving }) {
               </div>
             </div>
 
-            {/* Input Gắn File Văn Bản / Link Báo Cáo (Dùng chung 1 file cho nhiều trạm) */}
+            {/* Input Gắn File Văn Bản / Link Báo Cáo */}
             <div>
               <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '0.35rem' }}>
                 Gắn File Văn Bản / Link Báo Cáo:
               </label>
 
-              {/* Shared Document Chips (Cho phép chọn lại 1 file đã dán/tải để dùng chung cho nhiều trạm) */}
+              {/* Shared Document Chips (Chỉ hiển thị khi người dùng đã thực sự dán link/tải file trong phiên) */}
               {recentFiles.length > 0 && (
-                <div style={{ marginBottom: '0.5rem' }}>
-                  <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', display: 'block', marginBottom: '0.25rem' }}>
-                    📄 Gắn nhanh văn bản đã lưu (1 file dùng cho nhiều trạm):
-                  </span>
+                <div style={{ marginBottom: '0.5rem', background: 'rgba(255,255,255,0.03)', padding: '0.4rem 0.6rem', borderRadius: '6px', border: '1px solid var(--border-color)' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.3rem' }}>
+                    <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>
+                      📄 Văn bản đã dán/tải gần đây (Gắn 1 file dùng chung cho nhiều trạm):
+                    </span>
+                    <button
+                      type="button"
+                      onClick={handleClearAllRecentFiles}
+                      style={{ background: 'none', border: 'none', color: '#ef4444', fontSize: '0.65rem', cursor: 'pointer', padding: 0 }}
+                      title="Xóa toàn bộ danh sách file gợi ý"
+                    >
+                      Xóa gợi ý
+                    </button>
+                  </div>
+
                   <div style={{ display: 'flex', gap: '0.35rem', flexWrap: 'wrap' }}>
                     {recentFiles.map((f, i) => (
-                      <button
+                      <div
                         key={i}
-                        type="button"
-                        onClick={() => handleSelectRecentFile(f)}
-                        disabled={!selectedStation}
                         style={{
-                          padding: '0.2rem 0.5rem',
-                          fontSize: '0.7rem',
-                          borderRadius: '6px',
-                          border: fileDinhKem === f.url ? '1px solid #3b82f6' : '1px solid var(--border-color)',
-                          background: fileDinhKem === f.url ? 'rgba(59, 130, 246, 0.2)' : 'rgba(255,255,255,0.04)',
-                          color: fileDinhKem === f.url ? '#60a5fa' : 'var(--text-secondary)',
-                          cursor: 'pointer',
-                          display: 'flex',
+                          display: 'inline-flex',
                           alignItems: 'center',
-                          gap: '0.3rem'
+                          gap: '0.2rem',
+                          background: fileDinhKem === f.url ? 'rgba(59, 130, 246, 0.25)' : 'rgba(255,255,255,0.06)',
+                          border: fileDinhKem === f.url ? '1px solid #3b82f6' : '1px solid var(--border-color)',
+                          borderRadius: '6px',
+                          padding: '0.15rem 0.35rem'
                         }}
                       >
-                        <FileCheck size={12} />
-                        <span style={{ maxWidth: '160px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{f.name}</span>
-                      </button>
+                        <button
+                          type="button"
+                          onClick={() => handleSelectRecentFile(f)}
+                          disabled={!selectedStation}
+                          style={{
+                            background: 'none',
+                            border: 'none',
+                            fontSize: '0.7rem',
+                            color: fileDinhKem === f.url ? '#60a5fa' : 'var(--text-secondary)',
+                            cursor: selectedStation ? 'pointer' : 'not-allowed',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '0.25rem',
+                            padding: 0
+                          }}
+                        >
+                          <FileCheck size={12} />
+                          <span style={{ maxWidth: '140px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{f.name}</span>
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={(e) => handleRemoveRecentFile(i, e)}
+                          style={{
+                            background: 'none',
+                            border: 'none',
+                            color: 'var(--text-muted)',
+                            cursor: 'pointer',
+                            padding: '0 0.1rem',
+                            display: 'flex',
+                            alignItems: 'center'
+                          }}
+                          title="Xóa file này khỏi gợi ý"
+                        >
+                          <X size={12} />
+                        </button>
+                      </div>
                     ))}
                   </div>
                 </div>
