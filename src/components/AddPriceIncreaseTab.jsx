@@ -343,6 +343,7 @@ export default function AddPriceIncreaseTab({ data, onSaveStation, isSaving }) {
   }, [data, sessionEditedKeys]);
 
   // Active list based on view mode ('new' | 'edited' | 'chua_bao_cao' | 'da_bao_cao_chua_duyet' | 'vtt_dong_y' | 'all')
+  // Automatically sorted by Tăng / Tháng (chenhLechDonGia) from HIGHEST to LOWEST
   const activeDisplayList = useMemo(() => {
     let list = tangGiaList;
     if (tableViewMode === 'new') list = sessionNewList;
@@ -351,17 +352,31 @@ export default function AddPriceIncreaseTab({ data, onSaveStation, isSaving }) {
     else if (tableViewMode === 'da_bao_cao_chua_duyet') list = daBaoCaoChuaDuyetList;
     else if (tableViewMode === 'vtt_dong_y') list = vttDongYList;
 
-    if (!tableSearch.trim()) return list;
-    const q = tableSearch.toLowerCase().trim();
-    return list.filter(st =>
-      st.maCSHT?.toLowerCase().includes(q) ||
-      st.tenCSHT?.toLowerCase().includes(q) ||
-      st.site?.toLowerCase().includes(q) ||
-      st.toHaTang?.toLowerCase().includes(q) ||
-      st.chuHopDong?.toLowerCase().includes(q) ||
-      st.diaChiDoiTac?.toLowerCase().includes(q) ||
-      st.baoCaoVTT?.toLowerCase().includes(q)
-    );
+    if (tableSearch.trim()) {
+      const q = tableSearch.toLowerCase().trim();
+      list = list.filter(st =>
+        st.maCSHT?.toLowerCase().includes(q) ||
+        st.tenCSHT?.toLowerCase().includes(q) ||
+        st.site?.toLowerCase().includes(q) ||
+        st.toHaTang?.toLowerCase().includes(q) ||
+        st.chuHopDong?.toLowerCase().includes(q) ||
+        st.diaChiDoiTac?.toLowerCase().includes(q) ||
+        st.baoCaoVTT?.toLowerCase().includes(q)
+      );
+    }
+
+    // Sort descending by Tăng / Tháng (chenhLechDonGia) from highest to lowest
+    return [...list].sort((a, b) => {
+      const donGiaCuA = a.donGia2025 || 0;
+      const donGiaMoiA = a.deXuatT7 > 0 ? a.deXuatT7 : (a.donGia2026 || donGiaCuA);
+      const diffA = a.chenhLechDonGia || Math.max(0, donGiaMoiA - donGiaCuA);
+
+      const donGiaCuB = b.donGia2025 || 0;
+      const donGiaMoiB = b.deXuatT7 > 0 ? b.deXuatT7 : (b.donGia2026 || donGiaCuB);
+      const diffB = b.chenhLechDonGia || Math.max(0, donGiaMoiB - donGiaCuB);
+
+      return diffB - diffA;
+    });
   }, [tableViewMode, sessionNewList, sessionEditedList, chuaBaoCaoList, daBaoCaoChuaDuyetList, vttDongYList, tangGiaList, tableSearch]);
 
   // Dynamic KPI total calculated cleanly from unique items in active display list
@@ -1281,7 +1296,7 @@ export default function AddPriceIncreaseTab({ data, onSaveStation, isSaving }) {
                 <th style={{ padding: '0.75rem' }}>Tổ Hạ Tầng</th>
                 <th style={{ padding: '0.75rem', textAlign: 'right' }}>Đơn Giá 2025 (Cũ)</th>
                 <th style={{ padding: '0.75rem', textAlign: 'right' }}>Giá Mới (Tăng Giá)</th>
-                <th style={{ padding: '0.75rem', textAlign: 'right' }}>Tăng / Tháng</th>
+                <th style={{ padding: '0.75rem', textAlign: 'right', color: '#fbbf24' }}>Tăng / Tháng (▼ Cao ➔ Thấp)</th>
                 <th style={{ padding: '0.75rem', textAlign: 'center' }}>Thời Điểm Tăng</th>
                 <th style={{ padding: '0.75rem' }}>Báo Cáo VTT</th>
                 <th style={{ padding: '0.75rem', textAlign: 'center' }}>Văn Bản / File</th>
