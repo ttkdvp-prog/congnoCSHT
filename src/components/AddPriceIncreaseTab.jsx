@@ -2,6 +2,7 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { Search, PlusCircle, Save, Flame, Building, MapPin, DollarSign, Calendar, Edit3, X, AlertCircle, Sparkles, List, Trash2, FileText, User, Paperclip, Upload, ExternalLink, FileCheck, Download, CheckCircle2, Clock } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import rawFallbackData from '../data/csht_data.json';
+import { openAttachedFile } from '../utils/fileViewer';
 
 export default function AddPriceIncreaseTab({ data, onSaveStation, isSaving, serverSessionNewKeys = [], serverSessionEditedKeys = [] }) {
   // Baseline initial 137 price increase station keys
@@ -131,73 +132,9 @@ export default function AddPriceIncreaseTab({ data, onSaveStation, isSaving, ser
     } catch (e) {}
   }, [sessionEditedKeys]);
 
-  // Smart File Viewer Handler (Prevents broken relative routing to Dashboard)
+  // Smart File Viewer Handler (Works seamlessly across PC, iOS Safari, Android Chrome)
   const handleOpenFile = (rawUrl, station) => {
-    if (!rawUrl) return;
-    const url = String(rawUrl).trim();
-
-    // 1. Standard Web URL (http:// or https://)
-    if (/^(http:\/\/|https:\/\/)/i.test(url)) {
-      window.open(url, '_blank', 'noopener,noreferrer');
-      return;
-    }
-
-    // 2. Web URL without protocol (e.g. drive.google.com, docs.google.com, dropbox, etc.)
-    if (/^(drive\.google\.com|docs\.google\.com|dropbox\.com|onedrive\.|1drv\.ms|[a-z0-9-]+\.[a-z]{2,}\/)/i.test(url)) {
-      window.open('https://' + url, '_blank', 'noopener,noreferrer');
-      return;
-    }
-
-    // 3. Base64 Data URL
-    if (url.startsWith('data:')) {
-      const win = window.open('', '_blank');
-      if (win) {
-        const fName = station?.fileName || (station?.maCSHT ? `${station.maCSHT}_van_ban.pdf` : 'van_ban_dinh_kem.pdf');
-        win.document.write(`
-          <!DOCTYPE html>
-          <html>
-            <head>
-              <title>Xem File Văn Bản - ${station?.maCSHT || ''}</title>
-              <style>
-                body { margin: 0; background: #0f172a; color: #fff; font-family: system-ui, -apple-system, sans-serif; display: flex; flex-direction: column; height: 100vh; }
-                header { padding: 0.75rem 1.5rem; background: #1e293b; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid #334155; }
-                a.btn { background: #3b82f6; color: #fff; text-decoration: none; padding: 0.5rem 1rem; border-radius: 6px; font-weight: 600; font-size: 0.85rem; }
-                iframe { flex: 1; border: none; background: #fff; }
-              </style>
-            </head>
-            <body>
-              <header>
-                <div><strong>Văn Bản Đính Kèm:</strong> ${station?.maCSHT || ''} - ${station?.tenCSHT || ''}</div>
-                <a href="${url}" download="${fName}" class="btn">⬇️ Tải File Về Máy</a>
-              </header>
-              <iframe src="${url}"></iframe>
-            </body>
-          </html>
-        `);
-      } else {
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = station?.fileName || 'van_ban_dinh_kem.pdf';
-        a.click();
-      }
-      return;
-    }
-
-    // 4. Look up in recentFiles or local storage
-    try {
-      const saved = localStorage.getItem('csht_recent_attached_files');
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        const match = parsed.find(f => f.name === url || f.url === url || url.includes(f.name));
-        if (match && match.url) {
-          handleOpenFile(match.url, station);
-          return;
-        }
-      }
-    } catch (e) {}
-
-    // 5. Fallback: Text label or custom message
-    alert(`Văn bản đính kèm trạm ${station?.maCSHT || ''}:\n"${url}"\n\n📌 Gợi ý: Hãy dán Link Drive/OneDrive vào ô đính kèm để xem 1-click từ mọi thiết bị!`);
+    openAttachedFile(rawUrl, station);
   };
 
   // Remove a file from recent shared suggestions list

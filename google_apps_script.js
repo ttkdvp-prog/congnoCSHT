@@ -540,7 +540,8 @@ function doPost(e) {
         
         var driveFile = DriveApp.createFile(blob);
         driveFile.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
-        finalFileUrl = driveFile.getUrl();
+        var fileId = driveFile.getId();
+        finalFileUrl = 'https://drive.google.com/file/d/' + fileId + '/preview';
       } catch (fileErr) {
         finalFileUrl = contents.fileName ? contents.fileName : finalFileUrl;
       }

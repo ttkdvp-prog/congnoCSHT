@@ -1,5 +1,6 @@
 import React from 'react';
-import { X, Building2, CreditCard, Calendar, FileText } from 'lucide-react';
+import { X, Building2, CreditCard, Calendar, FileText, Building } from 'lucide-react';
+import { openAttachedFile } from '../utils/fileViewer';
 
 export default function DetailModal({ station, isOpen, onClose }) {
   if (!isOpen || !station) return null;
@@ -48,7 +49,6 @@ export default function DetailModal({ station, isOpen, onClose }) {
               <div><strong style={{ color: 'var(--text-secondary)' }}>Tên CSHT:</strong> {station.tenCSHT}</div>
               <div><strong style={{ color: 'var(--text-secondary)' }}>Mã CSHT RIMS:</strong> {station.maCSHTRims || '-'}</div>
               <div><strong style={{ color: 'var(--text-secondary)' }}>Chủ Hợp Đồng:</strong> {station.chuHopDong}</div>
-              <div><strong style={{ color: 'var(--text-secondary)' }}>Địa Chỉ Đối Tác:</strong> {station.diaChiDoiTac || 'Chưa cập nhật'}</div>
               <div><strong style={{ color: 'var(--text-secondary)' }}>Số Hợp Đồng:</strong> {station.soHopDong || '-'}</div>
               <div><strong style={{ color: 'var(--text-secondary)' }}>Ngày Ký:</strong> {station.ngayKy || '-'}</div>
               <div><strong style={{ color: 'var(--text-secondary)' }}>Ngày Tính Tiền:</strong> {station.ngayTinhTien || '-'}</div>
@@ -67,45 +67,28 @@ export default function DetailModal({ station, isOpen, onClose }) {
 
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '0.75rem', background: 'var(--bg-surface)', padding: '1rem', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-color)', fontSize: '0.85rem' }}>
               <div><strong style={{ color: 'var(--text-secondary)' }}>Người Thụ Hưởng:</strong> {station.nguoiThuHuong || '-'}</div>
-              <div><strong style={{ color: 'var(--text-secondary)' }}>Số Tài Khoản:</strong> {station.soTaiKhoan || '-'}</div>
-              <div><strong style={{ color: 'var(--text-secondary)' }}>Tên Ngân Hàng:</strong> {station.tenNganHang || '-'}</div>
-              <div><strong style={{ color: 'var(--text-secondary)' }}>Đã Trả 2025:</strong> {formatMoney(station.tong2025DaTra)}</div>
-              <div><strong style={{ color: 'var(--text-secondary)' }}>Còn Nợ Tồn 2025:</strong> <span style={{ color: 'var(--accent-rose)', fontWeight: 700 }}>{formatMoney(station.no2025Ton)}</span></div>
-              <div><strong style={{ color: 'var(--text-secondary)' }}>Đã TT 2026 (đến 31/3):</strong> <span style={{ color: 'var(--accent-emerald)', fontWeight: 700 }}>{formatMoney(station.daThanhToan2026Den313)}</span></div>
+              <div><strong style={{ color: 'var(--text-secondary)' }}>Số Tài Khoản:</strong> {station.soTaiKhoan || '-'} ({station.tenNganHang || '-'})</div>
             </div>
           </div>
 
-          {/* Section 3: Đơn giá & Điều chỉnh Tăng giá */}
-          <div style={{ marginBottom: '1.5rem' }}>
-            <h4 style={{ fontSize: '0.9rem', fontWeight: 700, color: '#fbbf24', marginBottom: '0.75rem' }}>
-              ĐƠN GIÁ & LỊCH SỬ TĂNG GIÁ
+          {/* Section 3: Thông tin Tăng giá & Pháp lý */}
+          <div style={{ background: 'var(--bg-secondary)', padding: '1rem', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-color)' }}>
+            <h4 style={{ fontSize: '0.9rem', fontWeight: 700, color: 'var(--accent-amber)', marginBottom: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <Building size={16} />
+              THÔNG TIN TĂNG GIÁ CSHT & TIẾN ĐỘ VĂN BẢN VTT
             </h4>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '0.75rem', background: 'rgba(245, 158, 11, 0.1)', padding: '1rem', borderRadius: 'var(--radius-md)', border: '1px solid rgba(245, 158, 11, 0.3)', fontSize: '0.85rem' }}>
-              <div><strong style={{ color: 'var(--text-secondary)' }}>Đơn giá 2025 (chưa VAT):</strong> {formatMoney(station.donGia2025)}</div>
-              <div><strong style={{ color: '#fbbf24' }}>Đơn giá mới 2026 (chưa VAT):</strong> {formatMoney(station.donGia2026)}</div>
-              <div><strong style={{ color: '#fbbf24' }}>Mức Tăng/Chênh Lệch:</strong> +{formatMoney(station.chenhLechDonGia)}</div>
-              <div><strong style={{ color: 'var(--text-secondary)' }}>Thời Điểm Tăng:</strong> {station.thoiDiemTangGia || '-'}</div>
-              <div><strong style={{ color: '#60a5fa' }}>Báo Cáo VTT:</strong> {station.baoCaoVTT || 'Chưa làm văn bản báo cáo'}</div>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '0.75rem', fontSize: '0.85rem' }}>
+              <div><strong style={{ color: 'var(--text-secondary)' }}>Đơn Giá 2025:</strong> {formatMoney(station.donGia2025)}</div>
+              <div><strong style={{ color: 'var(--text-secondary)' }}>Đơn Giá Mới 2026:</strong> <span style={{ color: '#34d399', fontWeight: 700 }}>{formatMoney(station.donGia2026)}</span></div>
+              <div><strong style={{ color: 'var(--text-secondary)' }}>Tăng Thêm / Tháng:</strong> <span style={{ color: '#f59e0b', fontWeight: 700 }}>+{formatMoney(station.chenhLechDonGia)}</span></div>
+              <div><strong style={{ color: 'var(--text-secondary)' }}>Thời Điểm Tăng Giá:</strong> {station.thoiDiemTangGia || '-'}</div>
+              <div><strong style={{ color: 'var(--text-secondary)' }}>Tiến Độ Văn Bản VTT:</strong> <span className="badge badge-amber">{station.baoCaoVTT || 'Chưa làm văn bản báo cáo'}</span></div>
               <div>
                 <strong style={{ color: 'var(--text-secondary)' }}>File đính kèm / Văn bản:</strong>{' '}
                 {station.fileDinhKem ? (
                   <button
                     type="button"
-                    onClick={() => {
-                      const url = String(station.fileDinhKem).trim();
-                      if (/^(http:\/\/|https:\/\/)/i.test(url)) {
-                        window.open(url, '_blank', 'noopener,noreferrer');
-                      } else if (/^(drive\.google\.com|docs\.google\.com|dropbox\.com|onedrive\.)/i.test(url)) {
-                        window.open('https://' + url, '_blank', 'noopener,noreferrer');
-                      } else if (url.startsWith('data:')) {
-                        const win = window.open('', '_blank');
-                        if (win) {
-                          win.document.write(`<iframe src="${url}" style="width:100vw;height:100vh;border:none;"></iframe>`);
-                        }
-                      } else {
-                        alert(`Văn bản đính kèm trạm ${station.maCSHT}: "${url}"`);
-                      }
-                    }}
+                    onClick={() => openAttachedFile(station.fileDinhKem, station)}
                     style={{ background: 'none', border: 'none', color: '#60a5fa', fontWeight: 700, textDecoration: 'underline', cursor: 'pointer', padding: 0 }}
                   >
                     📎 Xem văn bản đính kèm
@@ -116,8 +99,8 @@ export default function DetailModal({ station, isOpen, onClose }) {
             </div>
           </div>
 
-          {/* Section 4: Chi tiết thanh toán các tháng 2025 - 2026 */}
-          <div>
+          {/* Section 4: Lịch sử thanh toán */}
+          <div style={{ marginTop: '1.5rem' }}>
             <h4 style={{ fontSize: '0.9rem', fontWeight: 700, color: 'var(--accent-purple)', marginBottom: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
               <Calendar size={16} />
               CHI TIẾT PHÁT SINH THANH TOÁN 12 THÁNG NĂM 2026 (VNĐ)
